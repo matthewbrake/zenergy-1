@@ -16,6 +16,59 @@ interface AddressAutocompleteProps {
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
+// Global promise to ensure the script loading is attempted only once.
+let googleMapsScriptLoadingPromise: Promise<void> | null = null;
+
+const loadGoogleMapsScript = () => {
+  if (googleMapsScriptLoadingPromise) {
+    return googleMapsScriptLoadingPromise;
+  }
+  
+  googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
+    if (window.google && window.google.maps && window.google.maps.places) {
+      return resolve();
+    }
+    
+    if (!API_KEY) {
+       console.error("Google Maps API key is missing.");
+       return reject(new Error("Google Maps API key is missing."));
+    }
+
+    const scriptId = 'google-maps-script';
+    if (document.getElementById(scriptId)) {
+        // If script tag exists, wait for it to load.
+        const checkGoogle = setInterval(() => {
+            if (window.google && window.google.maps && window.google.maps.places) {
+                clearInterval(checkGoogle);
+                resolve();
+            }
+        }, 100);
+        return;
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=initMap`;
+    script.async = true;
+    script.defer = true;
+    
+    (window as any).initMap = () => {
+      resolve();
+      delete (window as any).initMap;
+    };
+    
+    script.onerror = (e) => {
+        reject(e);
+        googleMapsScriptLoadingPromise = null; // Allow retrying
+    }
+
+    document.head.appendChild(script);
+  });
+
+  return googleMapsScriptLoadingPromise;
+};
+
+
 export default function AddressAutocomplete({ onSubmit, error }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isApiLoaded, setIsApiLoaded] = useState(false);
@@ -23,30 +76,9 @@ export default function AddressAutocomplete({ onSubmit, error }: AddressAutocomp
   const [selectionError, setSelectionError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (window.google && window.google.maps && window.google.maps.places) {
-      setIsApiLoaded(true);
-      return;
-    }
-
-    if (!API_KEY) return;
-
-    const scriptId = 'google-maps-script';
-    if(document.getElementById(scriptId)) {
-        if(window.google) setIsApiLoaded(true);
-        return;
-    };
-
-    const script = document.createElement('script');
-    script.id = scriptId;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=initMap`;
-    script.async = true;
-    script.defer = true;
-    (window as any).initMap = () => setIsApiLoaded(true);
-    document.head.appendChild(script);
-
-    return () => {
-      delete (window as any).initMap;
-    };
+    loadGoogleMapsScript()
+      .then(() => setIsApiLoaded(true))
+      .catch(err => console.error("Failed to load Google Maps script:", err));
   }, []);
 
   useEffect(() => {

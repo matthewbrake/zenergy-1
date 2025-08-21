@@ -13,36 +13,68 @@ interface MapViewProps {
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-export default function MapView({ location }: MapViewProps) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [isApiLoaded, setIsApiLoaded] = useState(false);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
+// Global promise to ensure the script loading is attempted only once.
+let googleMapsScriptLoadingPromise: Promise<void> | null = null;
 
-  useEffect(() => {
+const loadGoogleMapsScript = () => {
+  if (googleMapsScriptLoadingPromise) {
+    return googleMapsScriptLoadingPromise;
+  }
+  
+  googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
     if (window.google && window.google.maps) {
-      setIsApiLoaded(true);
-      return;
+      return resolve();
     }
     
-    if (!API_KEY) return;
+    if (!API_KEY) {
+       console.error("Google Maps API key is missing.");
+       return reject(new Error("Google Maps API key is missing."));
+    }
 
     const scriptId = 'google-maps-script';
-    if(document.getElementById(scriptId)) {
-        if(window.google) setIsApiLoaded(true);
+    if (document.getElementById(scriptId)) {
+        // If script tag exists, wait for it to load.
+        const checkGoogle = setInterval(() => {
+            if (window.google && window.google.maps) {
+                clearInterval(checkGoogle);
+                resolve();
+            }
+        }, 100);
         return;
-    };
+    }
 
     const script = document.createElement('script');
     script.id = scriptId;
     script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap`;
     script.async = true;
     script.defer = true;
-    (window as any).initMap = () => setIsApiLoaded(true);
-    document.head.appendChild(script);
     
-    return () => {
+    (window as any).initMap = () => {
+      resolve();
       delete (window as any).initMap;
+    };
+    
+    script.onerror = (e) => {
+        reject(e);
+        googleMapsScriptLoadingPromise = null; // Allow retrying
     }
+
+    document.head.appendChild(script);
+  });
+
+  return googleMapsScriptLoadingPromise;
+};
+
+
+export default function MapView({ location }: MapViewProps) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [isApiLoaded, setIsApiLoaded] = useState(false);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+
+  useEffect(() => {
+    loadGoogleMapsScript()
+      .then(() => setIsApiLoaded(true))
+      .catch(err => console.error("Failed to load Google Maps script:", err));
   }, []);
 
   useEffect(() => {
