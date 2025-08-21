@@ -1,6 +1,4 @@
 import { z } from 'zod';
-import type { SolarPotentialAssessmentOutput } from '@/ai/flows/solar-potential-assessment';
-import type { VisualizeSolarDataLayersOutput } from '@/ai/flows/detailed-solar-visualization';
 
 export const ProspectSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -20,6 +18,26 @@ export interface AddressData {
     lng: number;
   };
 }
+
+// These types now reflect the structure of the direct Solar API response
+// We'll keep them separate for clarity, even though they look similar to the old ones.
+export type SolarPotentialAssessmentOutput = {
+  maxArrayPanelsCount?: number;
+  maxSunshineHoursPerYear?: number;
+  yearlyEnergyDcKwh?: number;
+  financialAnalysis?: any;
+  sunshineQuantiles?: number[];
+};
+
+export type VisualizeSolarDataLayersOutput = {
+  rgbImageryUrl?: string;
+  digitalSurfaceModelUrl?: string;
+  annualSolarFluxUrl?: string;
+  monthlySolarFluxUrls?: string[];
+  hourlyShadeUrls?: string[];
+  buildingMaskUrl?: string;
+};
+
 
 export type AnalysisResult = {
   potential: SolarPotentialAssessmentOutput;
