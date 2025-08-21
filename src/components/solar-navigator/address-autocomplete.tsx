@@ -20,68 +20,51 @@ const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 let googleMapsScriptLoadingPromise: Promise<void> | null = null;
 
 const loadGoogleMapsScript = () => {
-  if (googleMapsScriptLoadingPromise) {
-    return googleMapsScriptLoadingPromise;
-  }
-  
-  googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
-    // Check if the script is already loaded or in the process of loading
-    if (window.google && window.google.maps && window.google.maps.places) {
-      return resolve();
+    if (googleMapsScriptLoadingPromise) {
+        return googleMapsScriptLoadingPromise;
     }
-    
-    if (!API_KEY) {
-       console.error("Google Maps API key is missing.");
-       return reject(new Error("Google Maps API key is missing."));
-    }
-
-    const scriptId = 'google-maps-script';
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
-    
-    // If the script tag exists, it might be loading. We wait for it.
-    if (script) {
-        const checkGoogle = setInterval(() => {
-            if (window.google && window.google.maps && window.google.maps.places) {
-                clearInterval(checkGoogle);
-                resolve();
-            }
-        }, 100);
-
-        script.addEventListener('error', (e) => {
-            clearInterval(checkGoogle);
-            googleMapsScriptLoadingPromise = null; // Allow retrying
-            document.head.removeChild(script!);
-            reject(e);
-        });
-
-        return;
-    }
-
-    // If script does not exist, create and append it.
-    script = document.createElement('script');
-    script.id = scriptId;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places,marker&callback=initMap`;
-    script.async = true;
-    script.defer = true;
-    
-    (window as any).initMap = () => {
-      resolve();
-      delete (window as any).initMap;
-    };
-    
-    script.onerror = (e) => {
-        // Clean up on error
-        googleMapsScriptLoadingPromise = null; // Allow retrying
-        if (script && script.parentNode) {
-          script.parentNode.removeChild(script);
+    googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
+        const scriptId = 'google-maps-script';
+        if (document.getElementById(scriptId)) {
+             // If script tag exists, wait for it to load.
+            const checkGoogle = setInterval(() => {
+                if (window.google && window.google.maps && window.google.maps.places && window.google.maps.marker) {
+                    clearInterval(checkGoogle);
+                    resolve();
+                }
+            }, 100);
+            return;
         }
-        reject(e);
-    }
 
-    document.head.appendChild(script);
-  });
+        if (!API_KEY) {
+           console.error("Google Maps API key is missing.");
+           return reject(new Error("Google Maps API key is missing."));
+        }
 
-  return googleMapsScriptLoadingPromise;
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places,marker&callback=initMap`;
+        script.async = true;
+        script.defer = true;
+        
+        (window as any).initMap = () => {
+          resolve();
+          delete (window as any).initMap;
+        };
+        
+        script.onerror = (e) => {
+            googleMapsScriptLoadingPromise = null; 
+            if (script.parentNode) {
+              script.parentNode.removeChild(script);
+            }
+            console.error("Failed to load Google Maps script:", e);
+            reject(new Error("Google Maps script could not be loaded."));
+        }
+
+        document.head.appendChild(script);
+      });
+
+      return googleMapsScriptLoadingPromise;
 };
 
 
@@ -94,35 +77,53 @@ export default function AddressAutocomplete({ onSubmit, error }: AddressAutocomp
   useEffect(() => {
     loadGoogleMapsScript()
       .then(() => setIsApiLoaded(true))
-      .catch(err => console.error("Failed to load Google Maps script:", err));
+      .catch(err => {
+        console.error("Failed to load Google Maps script from useEffect:", err);
+        setSelectionError("Could not load mapping service. Please check your API key and network connection.");
+      });
   }, []);
 
   useEffect(() => {
     if (!isApiLoaded || !inputRef.current) return;
 
+    // Check if autocomplete is already attached
+    if (inputRef.current.getAttribute('data-autocomplete-attached')) {
+      return;
+    }
+
     const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
       types: ['address'],
       fields: ["address_components", "geometry", "place_id", "formatted_address"],
     });
+    inputRef.current.setAttribute('data-autocomplete-attached', 'true');
 
     autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
       setSelectionError(null);
+
+      console.log('[AUTOCOMPLETE] Place selected:', place);
+
       if (!place.geometry || !place.geometry.location) {
+        console.error('[AUTOCOMPLETE] Invalid place selected. Missing geometry.', place);
         setSelectionError("Please select a valid address from the dropdown.");
         return;
       }
+      
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      
+      console.log(`[AUTOCOMPLETE] Extracted Coords: Lat=${lat}, Lng=${lng}`);
+      console.log(`[AUTOCOMPLETE] Extracted Place ID: ${place.place_id}`);
+      console.log(`[AUTOCOMPLETE] Extracted Formatted Address: ${place.formatted_address}`);
 
       setIsGeocoding(true);
       const addressData: AddressData = {
         placeId: place.place_id,
         address: place.formatted_address || '',
-        location: {
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-        },
+        location: { lat, lng },
       };
       setIsGeocoding(false);
+      console.log('[AUTOCOMPLETE] Submitting AddressData to parent:', addressData);
       onSubmit(addressData);
     });
   }, [isApiLoaded, onSubmit]);
