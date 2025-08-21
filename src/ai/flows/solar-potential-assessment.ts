@@ -65,12 +65,21 @@ const solarPotentialAssessmentFlow = ai.defineFlow(
     outputSchema: SolarPotentialAssessmentOutputSchema,
   },
   async input => {
+    console.log('[FLOW:solarPotentialAssessment] Starting flow with input:', input);
     try {
       const {output} = await solarPotentialAssessmentPrompt(input);
-      return output!;
+      if (!output) {
+        console.error('[FLOW:solarPotentialAssessment] Prompt returned no output.');
+        throw new Error('Solar potential assessment prompt returned empty output.');
+      }
+      console.log('[FLOW:solarPotentialAssessment] Flow completed successfully.');
+      return output;
     } catch (e: any) {
-      console.error('Error during solar potential assessment:', e);
-      throw new Error(`Failed to assess solar potential: ${e.message}`);
+      console.error('!!!!!!!!!!!! ERROR IN solarPotentialAssessmentFlow !!!!!!!!!!!!');
+      console.error('Error message:', e.message);
+      console.error('Full error object:', JSON.stringify(e, null, 2));
+      console.error('Stack trace:', e.stack);
+      throw new Error(`Failed during solar potential assessment flow: ${e.message}`);
     }
   }
 );

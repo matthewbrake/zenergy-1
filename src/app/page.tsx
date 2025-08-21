@@ -33,12 +33,15 @@ export default function Home() {
     setStep('loading');
     setError(null);
 
+    console.log(`[CLIENT] Initiating solar analysis for: ${data.address}`, data.location);
     const result = await getSolarAnalysis(data.location);
 
     if (result.success && result.data) {
+      console.log('[CLIENT] Analysis successful.', result.data);
       setAnalysisResult(result.data);
       setStep('results');
     } else {
+      console.error('[CLIENT] Analysis failed. Error received from server:', result.error);
       setError(result.error || 'An unknown error occurred.');
       setStep('address-input'); // Go back to address step on error
     }
