@@ -30,7 +30,14 @@ export default function AddressAutocomplete({ onSubmit, error }: AddressAutocomp
 
     if (!API_KEY) return;
 
+    const scriptId = 'google-maps-script';
+    if(document.getElementById(scriptId)) {
+        if(window.google) setIsApiLoaded(true);
+        return;
+    };
+
     const script = document.createElement('script');
+    script.id = scriptId;
     script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=initMap`;
     script.async = true;
     script.defer = true;
