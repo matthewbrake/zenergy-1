@@ -22,7 +22,8 @@ const loadGoogleMapsScript = () => {
   }
   
   googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
-    if (window.google && window.google.maps) {
+    // Check if the script is already loaded or in the process of loading
+    if (window.google && window.google.maps && window.google.maps.marker) {
       return resolve();
     }
     
@@ -32,20 +33,31 @@ const loadGoogleMapsScript = () => {
     }
 
     const scriptId = 'google-maps-script';
-    if (document.getElementById(scriptId)) {
-        // If script tag exists, wait for it to load.
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+    
+    // If the script tag exists, it might be loading. We wait for it.
+    if (script) {
         const checkGoogle = setInterval(() => {
-            if (window.google && window.google.maps) {
+            if (window.google && window.google.maps && window.google.maps.marker) {
                 clearInterval(checkGoogle);
                 resolve();
             }
         }, 100);
+        
+        script.addEventListener('error', (e) => {
+            clearInterval(checkGoogle);
+            googleMapsScriptLoadingPromise = null; // Allow retrying
+            document.head.removeChild(script!);
+            reject(e);
+        });
+
         return;
     }
 
-    const script = document.createElement('script');
+    // If script does not exist, create and append it.
+    script = document.createElement('script');
     script.id = scriptId;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&callback=initMap`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=marker&callback=initMap`;
     script.async = true;
     script.defer = true;
     
@@ -55,8 +67,12 @@ const loadGoogleMapsScript = () => {
     };
     
     script.onerror = (e) => {
-        reject(e);
+        // Clean up on error
         googleMapsScriptLoadingPromise = null; // Allow retrying
+        if (script && script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+        reject(e);
     }
 
     document.head.appendChild(script);
