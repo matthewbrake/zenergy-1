@@ -45,19 +45,6 @@ export async function solarPotentialAssessment(input: SolarPotentialAssessmentIn
   return solarPotentialAssessmentFlow(input);
 }
 
-const solarPotentialAssessmentPrompt = ai.definePrompt({
-  name: 'solarPotentialAssessmentPrompt',
-  input: {schema: SolarPotentialAssessmentInputSchema},
-  output: {schema: SolarPotentialAssessmentOutputSchema},
-  prompt: `You are an expert solar energy consultant. Given the latitude and longitude of a building, you will use the buildingInsights API to assess its solar potential.
-
-  Latitude: {{{latitude}}}
-  Longitude: {{{longitude}}}
-
-  Return the maximum number of panels that can fit on the roof (maxArrayPanelsCount), the maximum sunshine hours per year (maxSunshineHoursPerYear), the financial analysis data (financialAnalysis), and the sunshine quantiles (sunshineQuantiles).
-  Also include the yearlyEnergyDcKwh if available in the response.`,
-});
-
 const solarPotentialAssessmentFlow = ai.defineFlow(
   {
     name: 'solarPotentialAssessmentFlow',
@@ -67,13 +54,37 @@ const solarPotentialAssessmentFlow = ai.defineFlow(
   async input => {
     console.log('[FLOW:solarPotentialAssessment] Starting flow with input:', input);
     try {
-      const {output} = await solarPotentialAssessmentPrompt(input);
-      if (!output) {
-        console.error('[FLOW:solarPotentialAssessment] Prompt returned no output.');
-        throw new Error('Solar potential assessment prompt returned empty output.');
+      const {latitude, longitude} = input;
+      const result = await ai.generate({
+        model: 'googleai/building-insights',
+        prompt: `Assess the solar potential for the building at latitude ${latitude} and longitude ${longitude}.`,
+        config: {
+          buildingInsights: {
+            building: {
+              latitude: latitude,
+              longitude: longitude,
+            }
+          },
+        },
+      });
+
+      console.log('[FLOW:solarPotentialAssessment] Raw API response received.');
+      const content = result.output?.buildingInsights?.solarPotential;
+
+      if (!content) {
+        console.error('[FLOW:solarPotentialAssessment] No solar potential content in API response.', JSON.stringify(result.output, null, 2));
+        throw new Error('API response did not contain the expected solarPotential content.');
       }
+
       console.log('[FLOW:solarPotentialAssessment] Flow completed successfully.');
-      return output;
+      return {
+        maxArrayPanelsCount: content.maxArrayPanelsCount,
+        maxSunshineHoursPerYear: content.maxSunshineHoursPerYear,
+        yearlyEnergyDcKwh: content.solarPanelConfigs?.[0]?.yearlyEnergyDcKwh,
+        financialAnalysis: content.financialAnalyses?.['cashPurchaseSavings'],
+        sunshineQuantiles: content.solarPotential?.sunshineQuantiles,
+      };
+
     } catch (e: any) {
       console.error('!!!!!!!!!!!! ERROR IN solarPotentialAssessmentFlow !!!!!!!!!!!!');
       console.error('Error message:', e.message);
