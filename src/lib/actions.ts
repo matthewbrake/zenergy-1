@@ -10,8 +10,9 @@ async function fetchSolarApi(endpoint: string, params: Record<string, any>): Pro
     throw new Error('Google Maps API key is missing.');
   }
   
+  // Correctly construct the URL, e.g., /v1/buildingInsights:findClosest
   const url = new URL(`${SOLAR_API_URL}/${endpoint}`);
-  url.search = new URLSearchParams(params).toString();
+  Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
   url.searchParams.append('key', API_KEY);
 
   console.log(`[SERVER ACTION] Fetching from Solar API: ${url}`);
@@ -45,7 +46,7 @@ export async function getSolarAnalysis(location: { lat: number; lng: number }): 
     const dataLayersParams = {
       'location.latitude': location.lat.toString(),
       'location.longitude': location.lng.toString(),
-      'radius_meters': '50', // A reasonable radius to find data layers
+      'radius_meters': '50',
       'view': 'FULL_LAYERS',
       'requiredQuality': 'HIGH',
     };
@@ -93,7 +94,7 @@ export async function getSolarAnalysis(location: { lat: number; lng: number }): 
       rgbImageryUrl: dataLayers.imageryQuality === 'HIGH' ? dataLayers.rgbUrl : '',
       digitalSurfaceModelUrl: dataLayers.dsmUrl,
       annualSolarFluxUrl: dataLayers.fluxUrl,
-      monthlySolarFluxUrls: dataLayers.monthlyFluxUrl ? [dataLayers.monthlyFluxUrl] : [], // API returns one URL for all months
+      monthlySolarFluxUrls: dataLayers.monthlyFluxUrl ? [dataLayers.monthlyFluxUrl] : [],
       hourlyShadeUrls: dataLayers.hourlyShadeUrls || [],
       buildingMaskUrl: '', // Not directly available in this response
     };
