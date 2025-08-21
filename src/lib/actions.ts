@@ -10,12 +10,11 @@ async function fetchSolarApi(endpoint: string, params: Record<string, any>): Pro
     throw new Error('Google Maps API key is missing.');
   }
   
-  // Correctly construct the URL, e.g., /v1/buildingInsights:findClosest
   const url = new URL(`${SOLAR_API_URL}/${endpoint}`);
-  Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+  Object.keys(params).forEach(key => url.searchParams.append(key, params[key].toString()));
   url.searchParams.append('key', API_KEY);
 
-  console.log(`[SERVER ACTION] Fetching from Solar API: ${url}`);
+  console.log(`[SERVER ACTION] Fetching from Solar API: ${url.toString()}`);
   
   const response = await fetch(url.toString(), {
     method: 'GET',
@@ -27,7 +26,14 @@ async function fetchSolarApi(endpoint: string, params: Record<string, any>): Pro
   if (!response.ok) {
     const errorBody = await response.text();
     console.error(`[SERVER ACTION] Solar API request failed with status ${response.status}: ${errorBody}`);
-    throw new Error(`Solar API request failed: ${response.statusText}. Details: ${errorBody}`);
+    try {
+      // Try to parse the error body as JSON for more detailed logging
+      const errorJson = JSON.parse(errorBody);
+      throw new Error(`Solar API request failed: ${response.statusText}. Details: ${JSON.stringify(errorJson)}`);
+    } catch (e) {
+      // If parsing fails, just throw the raw text
+      throw new Error(`Solar API request failed: ${response.statusText}. Details: ${errorBody}`);
+    }
   }
 
   return response.json();
@@ -38,15 +44,15 @@ export async function getSolarAnalysis(location: { lat: number; lng: number }): 
   
   try {
     const buildingInsightsParams = {
-      'location.latitude': location.lat.toString(),
-      'location.longitude': location.lng.toString(),
+      'location.latitude': location.lat,
+      'location.longitude': location.lng,
       'requiredQuality': 'HIGH'
     };
 
     const dataLayersParams = {
-      'location.latitude': location.lat.toString(),
-      'location.longitude': location.lng.toString(),
-      'radius_meters': '50',
+      'location.latitude': location.lat,
+      'location.longitude': location.lng,
+      'radius_meters': 50,
       'view': 'FULL_LAYERS',
       'requiredQuality': 'HIGH',
     };
@@ -76,7 +82,7 @@ export async function getSolarAnalysis(location: { lat: number; lng: number }): 
     const dataLayers = (visualizationResult as PromiseFulfilledResult<any>).value;
 
     if (!buildingInsights || !buildingInsights.solarPotential) {
-        throw new Error('Building insights not found for this location. It may be outside the coverage area.');
+        throw new Error('Building insights not found for this location. It may be outside the coverage area or no building was found within 50m of the point.');
     }
 
     console.log('[SERVER ACTION] Both API calls completed successfully.');
