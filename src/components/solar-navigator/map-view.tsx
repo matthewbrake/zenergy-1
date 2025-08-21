@@ -15,72 +15,54 @@ interface MapViewProps {
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-// Global promise to ensure the script loading is attempted only once.
 let googleMapsScriptLoadingPromise: Promise<void> | null = null;
 
 const loadGoogleMapsScript = () => {
-  if (googleMapsScriptLoadingPromise) {
-    return googleMapsScriptLoadingPromise;
-  }
-  
-  googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
-    // Check if the script is already loaded or in the process of loading
-    if (window.google && window.google.maps && window.google.maps.places && window.google.maps.marker) {
-      return resolve();
+    if (googleMapsScriptLoadingPromise) {
+        return googleMapsScriptLoadingPromise;
     }
-    
-    if (!API_KEY) {
-       console.error("Google Maps API key is missing.");
-       return reject(new Error("Google Maps API key is missing."));
-    }
-
-    const scriptId = 'google-maps-script';
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
-    
-    // If the script tag exists, it might be loading. We wait for it.
-    if (script) {
-        const checkGoogle = setInterval(() => {
-            if (window.google && window.google.maps && window.google.maps.places && window.google.maps.marker) {
-                clearInterval(checkGoogle);
-                resolve();
-            }
-        }, 100);
-        
-        script.addEventListener('error', (e) => {
-            clearInterval(checkGoogle);
-            googleMapsScriptLoadingPromise = null; // Allow retrying
-            document.head.removeChild(script!);
-            reject(e);
-        });
-
-        return;
-    }
-
-    // If script does not exist, create and append it.
-    script = document.createElement('script');
-    script.id = scriptId;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places,marker&callback=initMap`;
-    script.async = true;
-    script.defer = true;
-    
-    (window as any).initMap = () => {
-      resolve();
-      delete (window as any).initMap;
-    };
-    
-    script.onerror = (e) => {
-        // Clean up on error
-        googleMapsScriptLoadingPromise = null; // Allow retrying
-        if (script && script.parentNode) {
-          script.parentNode.removeChild(script);
+    googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
+        if (window.google && window.google.maps && window.google.maps.places && window.google.maps.marker) {
+            return resolve();
         }
-        reject(e);
-    }
+        if (!API_KEY) {
+            console.error("Google Maps API key is missing.");
+            return reject(new Error("Google Maps API key is missing."));
+        }
 
-    document.head.appendChild(script);
-  });
+        const scriptId = 'google-maps-script';
+        if (document.getElementById(scriptId)) {
+            // If script tag exists, wait for it to load
+            const interval = setInterval(() => {
+                if (window.google && window.google.maps && window.google.maps.places && window.google.maps.marker) {
+                    clearInterval(interval);
+                    resolve();
+                }
+            }, 100);
+            return;
+        }
 
-  return googleMapsScriptLoadingPromise;
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places,marker&callback=initMap`;
+        script.async = true;
+        script.defer = true;
+
+        (window as any).initMap = () => {
+            delete (window as any).initMap; // Clean up the callback
+            resolve();
+        };
+
+        script.onerror = (e) => {
+            console.error("Failed to load Google Maps script:", e);
+            googleMapsScriptLoadingPromise = null;
+            document.head.removeChild(script);
+            reject(new Error("Google Maps script could not be loaded."));
+        };
+        
+        document.head.appendChild(script);
+    });
+    return googleMapsScriptLoadingPromise;
 };
 
 
@@ -107,26 +89,23 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       });
       setMap(mapInstance);
       
-      if (visualizationData?.annualSolarFluxUrl) {
-         const fluxOverlay = new window.google.maps.GroundOverlay(
-           visualizationData.annualSolarFluxUrl,
-           {
-             south: visualizationData.boundingBox?.sw.lat,
-             west: visualizationData.boundingBox?.sw.lng,
-             north: visualizationData.boundingBox?.ne.lat,
-             east: visualizationData.boundingBox?.ne.lng
-           } as google.maps.LatLngBoundsLiteral,
-           { opacity: 0.6 }
-         );
-         fluxOverlay.setMap(mapInstance);
-      }
-
-
       new window.google.maps.marker.AdvancedMarkerElement({
         position: location,
         map: mapInstance,
       });
     }
+    
+    // Add overlay once the map is initialized and visualization data is available
+    if (map && visualizationData?.annualSolarFluxUrl && visualizationData?.boundingBox) {
+        const { sw, ne } = visualizationData.boundingBox;
+        const fluxOverlay = new window.google.maps.GroundOverlay(
+           visualizationData.annualSolarFluxUrl,
+           { south: sw.lat, west: sw.lng, north: ne.lat, east: ne.lng },
+           { opacity: 0.6 }
+        );
+        fluxOverlay.setMap(map);
+    }
+
   }, [isApiLoaded, location, map, visualizationData]);
   
   if (!API_KEY) {

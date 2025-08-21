@@ -26,12 +26,22 @@ async function fetchSolarApi(endpoint: string, params: Record<string, any>): Pro
   if (!response.ok) {
     const errorBody = await response.text();
     console.error(`[SERVER ACTION] Solar API request failed with status ${response.status}: ${errorBody}`);
+    let errorMessage = `Solar API request failed: ${response.statusText}.`;
     try {
       const errorJson = JSON.parse(errorBody);
-      throw new Error(`Solar API request failed: ${response.statusText}. Details: ${JSON.stringify(errorJson)}`);
+       if (errorJson.error && errorJson.error.message) {
+         if (errorJson.error.status === 'NOT_FOUND') {
+            errorMessage = "We're sorry, but solar data is not available for this address. This may be because it's outside the coverage area or not recognized as a building.";
+         } else {
+            errorMessage += ` Details: ${errorJson.error.message}`;
+         }
+       } else {
+         errorMessage += ` Details: ${errorBody}`;
+       }
     } catch (e) {
-      throw new Error(`Solar API request failed: ${response.statusText}. Details: ${errorBody}`);
+      errorMessage += ` Details: ${errorBody}`;
     }
+    throw new Error(errorMessage);
   }
 
   return response.json();
