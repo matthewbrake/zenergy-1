@@ -3,14 +3,14 @@
 import type { AnalysisResult, SolarPotentialAssessmentOutput, VisualizeSolarDataLayersOutput } from '@/lib/types';
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-const SOLAR_API_URL = 'https://solar.googleapis.com/v1';
+const SOLAR_API_BASE_URL = 'https://solar.googleapis.com';
 
 async function fetchSolarApi(endpoint: string, params: Record<string, any>): Promise<any> {
   if (!API_KEY) {
     throw new Error('Google Maps API key is missing.');
   }
   
-  const url = new URL(`${SOLAR_API_URL}/${endpoint}`);
+  const url = new URL(`${SOLAR_API_BASE_URL}/v1/${endpoint}`);
   Object.keys(params).forEach(key => url.searchParams.append(key, params[key].toString()));
   url.searchParams.append('key', API_KEY);
 
@@ -27,11 +27,9 @@ async function fetchSolarApi(endpoint: string, params: Record<string, any>): Pro
     const errorBody = await response.text();
     console.error(`[SERVER ACTION] Solar API request failed with status ${response.status}: ${errorBody}`);
     try {
-      // Try to parse the error body as JSON for more detailed logging
       const errorJson = JSON.parse(errorBody);
       throw new Error(`Solar API request failed: ${response.statusText}. Details: ${JSON.stringify(errorJson)}`);
     } catch (e) {
-      // If parsing fails, just throw the raw text
       throw new Error(`Solar API request failed: ${response.statusText}. Details: ${errorBody}`);
     }
   }
@@ -87,13 +85,9 @@ export async function getSolarAnalysis(location: { lat: number; lng: number }): 
 
     console.log('[SERVER ACTION] Both API calls completed successfully.');
     
-    // Adapt the API responses to our existing types
     const potential: SolarPotentialAssessmentOutput = {
-      maxArrayPanelsCount: buildingInsights.solarPotential.maxArrayPanelsCount,
-      maxSunshineHoursPerYear: buildingInsights.solarPotential.maxSunshineHoursPerYear,
-      yearlyEnergyDcKwh: buildingInsights.solarPotential.solarPanelConfigs?.[0]?.yearlyEnergyDcKwh,
-      financialAnalysis: buildingInsights.solarPotential.financialAnalyses?.find((a: any) => a.cashPurchaseSavings),
-      sunshineQuantiles: buildingInsights.solarPotential.wholeRoofStats?.sunshineQuantiles,
+      ...buildingInsights.solarPotential,
+      financialAnalysis: buildingInsights.solarPotential.financialAnalyses?.find((a: any) => a.defaultBill === true),
     };
     
     const visualization: VisualizeSolarDataLayersOutput = {
@@ -102,7 +96,8 @@ export async function getSolarAnalysis(location: { lat: number; lng: number }): 
       annualSolarFluxUrl: dataLayers.fluxUrl,
       monthlySolarFluxUrls: dataLayers.monthlyFluxUrl ? [dataLayers.monthlyFluxUrl] : [],
       hourlyShadeUrls: dataLayers.hourlyShadeUrls || [],
-      buildingMaskUrl: '', // Not directly available in this response
+      buildingMaskUrl: '', 
+      boundingBox: buildingInsights.boundingBox,
     };
 
     return { success: true, data: { potential, visualization } };

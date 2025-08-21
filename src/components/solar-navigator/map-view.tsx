@@ -3,12 +3,14 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Loader, AlertCircle } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import type { VisualizeSolarDataLayersOutput } from '@/lib/types';
 
 interface MapViewProps {
   location: {
     lat: number;
     lng: number;
   };
+  visualizationData?: VisualizeSolarDataLayersOutput;
 }
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -23,7 +25,7 @@ const loadGoogleMapsScript = () => {
   
   googleMapsScriptLoadingPromise = new Promise((resolve, reject) => {
     // Check if the script is already loaded or in the process of loading
-    if (window.google && window.google.maps && window.google.maps.marker) {
+    if (window.google && window.google.maps && window.google.maps.places && window.google.maps.marker) {
       return resolve();
     }
     
@@ -38,7 +40,7 @@ const loadGoogleMapsScript = () => {
     // If the script tag exists, it might be loading. We wait for it.
     if (script) {
         const checkGoogle = setInterval(() => {
-            if (window.google && window.google.maps && window.google.maps.marker) {
+            if (window.google && window.google.maps && window.google.maps.places && window.google.maps.marker) {
                 clearInterval(checkGoogle);
                 resolve();
             }
@@ -57,7 +59,7 @@ const loadGoogleMapsScript = () => {
     // If script does not exist, create and append it.
     script = document.createElement('script');
     script.id = scriptId;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=marker&callback=initMap`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places,marker&callback=initMap`;
     script.async = true;
     script.defer = true;
     
@@ -82,7 +84,7 @@ const loadGoogleMapsScript = () => {
 };
 
 
-export default function MapView({ location }: MapViewProps) {
+export default function MapView({ location, visualizationData }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isApiLoaded, setIsApiLoaded] = useState(false);
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -105,63 +107,27 @@ export default function MapView({ location }: MapViewProps) {
       });
       setMap(mapInstance);
       
-      const boundsPadding = 0.0005;
-      const overlayBounds = new window.google.maps.LatLngBounds(
-        new window.google.maps.LatLng(location.lat - boundsPadding, location.lng - boundsPadding),
-        new window.google.maps.LatLng(location.lat + boundsPadding, location.lng + boundsPadding)
-      );
-
-      class HeatmapOverlay extends window.google.maps.OverlayView {
-        private bounds: google.maps.LatLngBounds;
-        private div: HTMLDivElement | null = null;
-      
-        constructor(bounds: google.maps.LatLngBounds) {
-          super();
-          this.bounds = bounds;
-        }
-      
-        onAdd() {
-          this.div = document.createElement('div');
-          this.div.style.borderStyle = 'none';
-          this.div.style.borderWidth = '0px';
-          this.div.style.position = 'absolute';
-          this.div.style.background = 'linear-gradient(to top right, rgba(255, 235, 59, 0.4), rgba(244, 67, 54, 0.6))';
-          this.div.style.opacity = '0.7';
-          this.div.style.borderRadius = '8px';
-      
-          const panes = this.getPanes();
-          panes?.overlayLayer.appendChild(this.div);
-        }
-      
-        draw() {
-          const overlayProjection = this.getProjection();
-          const sw = overlayProjection.fromLatLngToDivPixel(this.bounds.getSouthWest())!;
-          const ne = overlayProjection.fromLatLngToDivPixel(this.bounds.getNorthEast())!;
-          
-          if (this.div) {
-              this.div.style.left = `${sw.x}px`;
-              this.div.style.top = `${ne.y}px`;
-              this.div.style.width = `${ne.x - sw.x}px`;
-              this.div.style.height = `${sw.y - ne.y}px`;
-          }
-        }
-      
-        onRemove() {
-          if (this.div) {
-              (this.div.parentNode as HTMLElement).removeChild(this.div);
-              this.div = null;
-          }
-        }
+      if (visualizationData?.annualSolarFluxUrl) {
+         const fluxOverlay = new window.google.maps.GroundOverlay(
+           visualizationData.annualSolarFluxUrl,
+           {
+             south: visualizationData.boundingBox?.sw.lat,
+             west: visualizationData.boundingBox?.sw.lng,
+             north: visualizationData.boundingBox?.ne.lat,
+             east: visualizationData.boundingBox?.ne.lng
+           } as google.maps.LatLngBoundsLiteral,
+           { opacity: 0.6 }
+         );
+         fluxOverlay.setMap(mapInstance);
       }
-      
-      new HeatmapOverlay(overlayBounds).setMap(mapInstance);
+
 
       new window.google.maps.marker.AdvancedMarkerElement({
         position: location,
         map: mapInstance,
       });
     }
-  }, [isApiLoaded, location, map]);
+  }, [isApiLoaded, location, map, visualizationData]);
   
   if (!API_KEY) {
     return (

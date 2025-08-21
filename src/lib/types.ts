@@ -19,16 +19,17 @@ export interface AddressData {
   };
 }
 
-// These types now reflect the structure of the direct Solar API response
-// We'll keep them separate for clarity, even though they look similar to the old ones.
+// Directly maps to the Solar API's SolarPotential sub-object
 export type SolarPotentialAssessmentOutput = {
   maxArrayPanelsCount?: number;
   maxSunshineHoursPerYear?: number;
+  carbonOffsetFactorKgPerMwh?: number;
   yearlyEnergyDcKwh?: number;
-  financialAnalysis?: any;
+  financialAnalysis?: any; // The structure is complex, using 'any' for now
   sunshineQuantiles?: number[];
 };
 
+// Directly maps to the Solar API's dataLayers response
 export type VisualizeSolarDataLayersOutput = {
   rgbImageryUrl?: string;
   digitalSurfaceModelUrl?: string;
@@ -36,6 +37,10 @@ export type VisualizeSolarDataLayersOutput = {
   monthlySolarFluxUrls?: string[];
   hourlyShadeUrls?: string[];
   buildingMaskUrl?: string;
+  boundingBox?: {
+    sw: { lat: number; lng: number };
+    ne: { lat: number; lng: number };
+  };
 };
 
 
