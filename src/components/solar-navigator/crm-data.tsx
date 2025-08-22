@@ -9,17 +9,21 @@ interface CrmDataProps {
 
 export default function CrmData({ result, addressData }: CrmDataProps) {
   const crmDataObject = {
+    "Lead.Status": "New",
+    "Lead.Source": "Website Solar Funnel",
+    "Property.Address": addressData.address,
     "Property.GooglePlaceID": addressData.placeId,
     "Property.Latitude": addressData.location.lat,
     "Property.Longitude": addressData.location.lng,
-    // location_type requires a Geocoding API call, which is abstracted.
-    // We'll add a placeholder to represent this valuable data point.
-    "Property.AddressConfidence": "ROOFTOP (example)",
     "Solar.MaxPanels": result.potential.maxArrayPanelsCount,
-    "Solar.AnnualSunHours": result.potential.maxSunshineHoursPerYear,
-    "Solar.FinancialData": result.potential.financialAnalysis,
-    "Solar.GeoTIFF_URLs": result.visualization,
-    "Solar.CarbonOffsetFactorKgPerMwh": 250 // Example value
+    "Solar.MaxSunshineHoursPerYear": result.potential.maxSunshineHoursPerYear,
+    "Solar.CarbonOffsetFactorKgPerMwh": result.potential.carbonOffsetFactorKgPerMwh,
+    "Solar.YearlyEnergyDcKwh": result.potential.yearlyEnergyDcKwh,
+    "Solar.FinancialAnalysis": result.potential.financialAnalysis,
+    "Solar.VisualizationURLs": result.visualization,
+    "API.ImageryDate": result.potential.imageryDate,
+    "API.ImageryProcessedDate": result.potential.imageryProcessedDate,
+    "API.ImageryQuality": result.potential.imageryQuality,
   };
 
   return (

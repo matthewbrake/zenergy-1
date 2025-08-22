@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export const ProspectSchema = z.object({
@@ -20,14 +19,48 @@ export interface AddressData {
   };
 }
 
+export type Money = {
+  currencyCode?: string;
+  units?: number;
+  nanos?: number;
+};
+
+export type SavingsOverTime = {
+  savingsYear1?: Money;
+  savingsYear20?: Money;
+  presentValueOfSavingsYear20?: Money;
+  savingsLifetime?: Money;
+  presentValueOfSavingsLifetime?: Money;
+  financiallyViable?: boolean;
+};
+
+export type CashPurchaseSavings = {
+  outOfPocketCost?: Money;
+  upfrontCost?: Money;
+  rebateValue?: Money;
+  savings?: SavingsOverTime;
+  paybackYears?: number;
+};
+
+export type FinancialAnalysis = {
+  monthlyBill?: Money;
+  defaultBill?: boolean;
+  averageKwhPerMonth?: number;
+  cashPurchaseSavings?: CashPurchaseSavings;
+  // Other financing options can be added here
+};
+
 // Directly maps to the Solar API's SolarPotential sub-object
 export type SolarPotentialAssessmentOutput = {
   maxArrayPanelsCount?: number;
   maxSunshineHoursPerYear?: number;
   carbonOffsetFactorKgPerMwh?: number;
   yearlyEnergyDcKwh?: number;
-  financialAnalysis?: any; // The structure is complex, using 'any' for now
+  financialAnalysis?: FinancialAnalysis; 
   sunshineQuantiles?: number[];
+  imageryDate?: any;
+  imageryProcessedDate?: any;
+  imageryQuality?: string;
 };
 
 // Directly maps to the Solar API's dataLayers response

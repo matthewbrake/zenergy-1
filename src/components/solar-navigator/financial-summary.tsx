@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { type SolarPotentialAssessmentOutput } from '@/ai/flows/solar-potential-assessment';
+import { type FinancialAnalysis } from '@/lib/types';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableRow, TableHead, TableHeader } from '@
 
 
 interface FinancialSummaryProps {
-  financialAnalysis: SolarPotentialAssessmentOutput['financialAnalysis'];
+  financialAnalysis: FinancialAnalysis;
   yearlyEnergyDcKwh: number;
 }
 
@@ -20,8 +20,8 @@ const EFFICIENCY_DEPRECIATION_RATE = 0.005;
 const PANEL_LIFETIME_YEARS = 20;
 
 export default function FinancialSummary({ financialAnalysis, yearlyEnergyDcKwh }: FinancialSummaryProps) {
-  const [monthlyBill, setMonthlyBill] = useState(150);
-  const [utilityRate, setUtilityRate] = useState(0.18); // National average placeholder
+  const [monthlyBill, setMonthlyBill] = useState(financialAnalysis?.monthlyBill?.units || 150);
+  const [utilityRate, setUtilityRate] = useState(0.18); // National average placeholder, could be an input
   
   const annualEnergyAcKwh = yearlyEnergyDcKwh * DC_TO_AC_DERATE;
   
@@ -29,10 +29,8 @@ export default function FinancialSummary({ financialAnalysis, yearlyEnergyDcKwh 
     return acc + (annualEnergyAcKwh * Math.pow(1 - EFFICIENCY_DEPRECIATION_RATE, i));
   }, 0);
 
-  const annualConsumption = (monthlyBill / utilityRate) * 12;
-  const lifetimeSavings = lifetimeProduction * utilityRate;
-
-  const costWithPanels = financialAnalysis?.cashPurchaseSavings.outOfPocketCost || 0;
+  const lifetimeSavings = financialAnalysis?.cashPurchaseSavings?.savings?.savingsLifetime?.units || 0;
+  const costWithPanels = financialAnalysis?.cashPurchaseSavings?.outOfPocketCost?.units || 0;
 
   return (
     <div className="space-y-8 p-4">
@@ -84,11 +82,11 @@ export default function FinancialSummary({ financialAnalysis, yearlyEnergyDcKwh 
             </TableRow>
             <TableRow>
               <TableCell className="font-medium">Federal & State Incentives</TableCell>
-              <TableCell className="text-right text-green-600">-{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(financialAnalysis?.cashPurchaseSavings.rebateValue || 0)}</TableCell>
+              <TableCell className="text-right text-green-600">-{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(financialAnalysis?.cashPurchaseSavings?.rebateValue?.units || 0)}</TableCell>
             </TableRow>
             <TableRow className="bg-muted/50">
               <TableCell className="font-bold">Net System Cost</TableCell>
-              <TableCell className="text-right font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(financialAnalysis?.cashPurchaseSavings.upfrontCost || 0)}</TableCell>
+              <TableCell className="text-right font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(financialAnalysis?.cashPurchaseSavings?.upfrontCost?.units || 0)}</TableCell>
             </TableRow>
              <TableRow>
               <TableCell className="font-medium">
@@ -106,11 +104,15 @@ export default function FinancialSummary({ financialAnalysis, yearlyEnergyDcKwh 
               </TableCell>
               <TableCell className="text-right">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(lifetimeSavings)}</TableCell>
             </TableRow>
+             <TableRow>
+              <TableCell className="font-medium">Payback Period</TableCell>
+              <TableCell className="text-right">{financialAnalysis?.cashPurchaseSavings?.paybackYears?.toFixed(1) || 'N/A'} years</TableCell>
+            </TableRow>
           </TableBody>
         </Table>
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Disclaimer: These are estimates. Actual savings may vary based on usage, weather, and utility rate changes. Does not account for soiling, snow, or other local factors.
+          Disclaimer: These are estimates based on the default financial model for your area. Actual savings may vary based on usage, weather, and utility rate changes.
         </p>
       </div>
     </div>

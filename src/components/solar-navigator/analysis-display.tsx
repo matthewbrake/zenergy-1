@@ -22,10 +22,10 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
   const { potential } = result;
   
   const viabilityScore = potential.sunshineQuantiles && potential.sunshineQuantiles.length > 0
-    ? Math.round(potential.sunshineQuantiles[Math.floor(potential.sunshineQuantiles.length * 0.8)] / 100)
+    ? Math.round(potential.sunshineQuantiles[Math.floor(potential.sunshineQuantiles.length * 0.8)] / 20) // Scaled to 100
     : 75; // Default score
 
-  const twentyYearSavings = potential.financialAnalysis?.cashPurchaseSavings.savings.savingsYear20?.units || 0;
+  const twentyYearSavings = potential.financialAnalysis?.cashPurchaseSavings?.savings?.savingsYear20?.units || 0;
   const carbonOffset = potential.carbonOffsetFactorKgPerMwh || 0;
 
   return (
