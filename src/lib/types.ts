@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export const ProspectSchema = z.object({
@@ -48,3 +49,16 @@ export type AnalysisResult = {
   potential: SolarPotentialAssessmentOutput;
   visualization: VisualizeSolarDataLayersOutput;
 };
+
+// Types for GeoTIFF rendering
+export interface GeoTiffData {
+  width: number;
+  height: number;
+  rasters: Array<number>[];
+  bounds: {
+    left: number;
+    bottom: number;
+    right: number;
+    top: number;
+  };
+}
