@@ -63,54 +63,6 @@ const loadGoogleMapsScript = () => {
   return googleMapsScriptLoadingPromise;
 };
 
-class CanvasOverlay extends google.maps.OverlayView {
-    private canvas: HTMLCanvasElement;
-    private bounds: google.maps.LatLngBounds;
-    private div?: HTMLDivElement;
-
-    constructor(canvas: HTMLCanvasElement, bounds: google.maps.LatLngBounds) {
-        super();
-        this.canvas = canvas;
-        this.bounds = bounds;
-    }
-
-    onAdd() {
-        this.div = document.createElement('div');
-        this.div.style.borderStyle = 'none';
-        this.div.style.borderWidth = '0px';
-        this.div.style.position = 'absolute';
-        this.div.appendChild(this.canvas);
-        
-        const panes = this.getPanes();
-        if (panes) {
-            panes.overlayLayer.appendChild(this.div);
-        }
-    }
-
-    draw() {
-        const overlayProjection = this.getProjection();
-        if (!overlayProjection || !this.div) {
-            return;
-        }
-
-        const sw = overlayProjection.fromLatLngToDivPixel(this.bounds.getSouthWest())!;
-        const ne = overlayProjection.fromLatLngToDivPixel(this.bounds.getNorthEast())!;
-
-        this.div.style.left = `${sw.x}px`;
-        this.div.style.top = `${ne.y}px`;
-        this.div.style.width = `${ne.x - sw.x}px`;
-        this.div.style.height = `${sw.y - ne.y}px`;
-    }
-
-    onRemove() {
-        if (this.div) {
-            (this.div.parentNode as HTMLElement).removeChild(this.div);
-            delete this.div;
-        }
-    }
-}
-
-
 export default function MapView({ location, visualizationData }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isApiLoaded, setIsApiLoaded] = useState(false);
@@ -152,6 +104,54 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       setIsRenderingOverlay(true);
       setError(null);
       console.log("[MapView] Map and visualization data are ready. Starting overlay render.");
+      
+      // Define the overlay class *inside* the effect, so it only runs on the client
+      class CanvasOverlay extends google.maps.OverlayView {
+          private canvas: HTMLCanvasElement;
+          private bounds: google.maps.LatLngBounds;
+          private div?: HTMLDivElement;
+
+          constructor(canvas: HTMLCanvasElement, bounds: google.maps.LatLngBounds) {
+              super();
+              this.canvas = canvas;
+              this.bounds = bounds;
+          }
+
+          onAdd() {
+              this.div = document.createElement('div');
+              this.div.style.borderStyle = 'none';
+              this.div.style.borderWidth = '0px';
+              this.div.style.position = 'absolute';
+              this.div.appendChild(this.canvas);
+              
+              const panes = this.getPanes();
+              if (panes) {
+                  panes.overlayLayer.appendChild(this.div);
+              }
+          }
+
+          draw() {
+              const overlayProjection = this.getProjection();
+              if (!overlayProjection || !this.div) {
+                  return;
+              }
+
+              const sw = overlayProjection.fromLatLngToDivPixel(this.bounds.getSouthWest())!;
+              const ne = overlayProjection.fromLatLngToDivPixel(this.bounds.getNorthEast())!;
+
+              this.div.style.left = `${sw.x}px`;
+              this.div.style.top = `${ne.y}px`;
+              this.div.style.width = `${ne.x - sw.x}px`;
+              this.div.style.height = `${sw.y - ne.y}px`;
+          }
+
+          onRemove() {
+              if (this.div) {
+                  (this.div.parentNode as HTMLElement).removeChild(this.div);
+                  delete this.div;
+              }
+          }
+      }
 
       const renderOverlay = async () => {
         try {
@@ -188,7 +188,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
 
       renderOverlay();
     }
-  }, [map, visualizationData]);
+  }, [map, visualizationData, API_KEY]);
   
   if (!API_KEY) {
     return (

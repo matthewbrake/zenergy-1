@@ -75,8 +75,8 @@ export async function renderGeoTiff(
     
     let tiff;
     try {
-        console.log(`[GeoTiffRenderer] Fetching GeoTIFF from URL`);
         const fullUrl = `${url}&key=${apiKey}`;
+        console.log(`[GeoTiffRenderer] Fetching GeoTIFF from URL: ${fullUrl}`);
         tiff = await fromUrl(fullUrl);
         console.log('[GeoTiffRenderer] Successfully fetched GeoTIFF data.');
     } catch (e) {
