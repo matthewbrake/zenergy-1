@@ -16,6 +16,7 @@ const global = {
   appName: 'Solaris Navigator',
   appDescription: 'Your API-Driven Solar Sales Funnel',
   logo: '/logo.svg', // Placeholder for logo path
+  appUrl: 'http://localhost:9002' // Base URL for the app, used for redirects
 };
 
 // =================================================================
@@ -63,7 +64,8 @@ const solarReport = {
 // =================================================================
 const financialDetails = {
     title: 'Financial Details',
-    description: 'Help us refine your savings estimate.',
+    description: 'Help us refine your savings estimate by providing your recent energy bills.',
+    formspreeEndpoint: 'https://formspree.io/f/mrblnyld', // <-- YOUR FORMSpree ENDPOINT HERE
     monthlyBill: {
         title: 'Your Energy Usage',
         description: 'Adjust the slider to match your average monthly electricity bill.',
@@ -74,10 +76,10 @@ const financialDetails = {
     },
     fileUpload: {
         title: 'Upload Your Bills',
-        description: 'Please upload your last 1-4 electricity bills (PDF or images, under 5MB each).',
+        description: 'Please upload your last 1-4 electricity bills (PDF or images). The most recent bill is required.',
         requiredCount: 1,
         maxFiles: 4,
-        labels: ['Last Month', '2 Months Ago', '3 Months Ago', '4 Months Ago'],
+        labels: ['Last Month (Required)', '2 Months Ago', '3 Months Ago', '4 Months Ago'],
     }
 };
 

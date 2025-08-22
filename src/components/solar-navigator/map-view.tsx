@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
@@ -71,7 +70,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRenderingOverlay, setIsRenderingOverlay] = useState(false);
-  const overlayRef = useRef<any>(null); // To hold the overlay instance
+  const overlayRef = useRef<any>(null);
 
   useEffect(() => {
     console.log('[MapView] LOG: Component mounted. Loading Google Maps script...');
@@ -116,6 +115,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
         return;
     }
 
+    // Define the custom overlay class inside the useEffect to ensure 'google' is defined
     class CanvasOverlay extends window.google.maps.OverlayView {
         private canvas: HTMLCanvasElement;
         private bounds: google.maps.LatLngBounds;
