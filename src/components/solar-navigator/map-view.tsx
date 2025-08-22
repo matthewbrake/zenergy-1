@@ -33,7 +33,7 @@ const loadGoogleMapsScript = () => {
       }
 
       if (!API_KEY) {
-        console.error("Google Maps API key is missing.");
+        console.error("[MapView] Google Maps API key is missing.");
         return reject(new Error("Google Maps API key is missing."));
       }
 
@@ -44,6 +44,7 @@ const loadGoogleMapsScript = () => {
       script.defer = true;
 
       (window as any).initMap = () => {
+        console.log("[MapView] Google Maps script initialized via callback.");
         resolve();
         delete (window as any).initMap;
       };
@@ -53,7 +54,7 @@ const loadGoogleMapsScript = () => {
         if (script.parentNode) {
           script.parentNode.removeChild(script);
         }
-        console.error("Failed to load Google Maps script:", e);
+        console.error("[MapView] Failed to load Google Maps script:", e);
         reject(new Error("Google Maps script could not be loaded."));
       };
 
@@ -71,17 +72,21 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
   const [isRenderingOverlay, setIsRenderingOverlay] = useState(false);
 
   useEffect(() => {
+    console.log('[MapView] Component mounted. Loading Google Maps script...');
     loadGoogleMapsScript()
-      .then(() => setIsApiLoaded(true))
+      .then(() => {
+        console.log('[MapView] Google Maps script loaded successfully.');
+        setIsApiLoaded(true)
+      })
       .catch(err => {
-        console.error("[MapView] Failed to load Google Maps script:", err);
+        console.error("[MapView] Failed to load Google Maps script from useEffect:", err);
         setError("Mapping service could not be loaded.");
       });
   }, []);
 
   useEffect(() => {
     if (isApiLoaded && mapRef.current && !map) {
-      console.log("[MapView] API loaded, initializing map.");
+      console.log("[MapView] API loaded, initializing map at:", location);
       const mapInstance = new window.google.maps.Map(mapRef.current, {
         center: location,
         zoom: 20,
@@ -96,6 +101,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
         position: location,
         map: mapInstance,
       });
+      console.log("[MapView] Map initialized and marker placed.");
     }
   }, [isApiLoaded, location, map]);
 
@@ -103,10 +109,10 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     if (map && visualizationData?.annualSolarFluxUrl && visualizationData?.boundingBox && API_KEY) {
       setIsRenderingOverlay(true);
       setError(null);
-      console.log("[MapView] Map and visualization data are ready. Starting overlay render.");
+      console.log("[MapView] LOG: Map and visualization data are ready. Starting overlay render.");
+      console.log("[MapView] LOG: Received visualizationData:", visualizationData);
       
-      // Define the overlay class *inside* the effect, so it only runs on the client
-      class CanvasOverlay extends google.maps.OverlayView {
+      class CanvasOverlay extends window.google.maps.OverlayView {
           private canvas: HTMLCanvasElement;
           private bounds: google.maps.LatLngBounds;
           private div?: HTMLDivElement;
@@ -115,6 +121,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
               super();
               this.canvas = canvas;
               this.bounds = bounds;
+              console.log("[MapView] LOG: CanvasOverlay constructor called with canvas and bounds:", bounds.toJSON());
           }
 
           onAdd() {
@@ -127,35 +134,45 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
               const panes = this.getPanes();
               if (panes) {
                   panes.overlayLayer.appendChild(this.div);
+                   console.log("[MapView] LOG: CanvasOverlay onAdd complete. Div appended to overlayLayer.");
+              } else {
+                  console.error("[MapView] ERROR: Could not get map panes in onAdd.");
               }
           }
 
           draw() {
               const overlayProjection = this.getProjection();
               if (!overlayProjection || !this.div) {
+                  if (!overlayProjection) console.error("[MapView] ERROR: No overlay projection found in draw method.");
+                  if (!this.div) console.error("[MapView] ERROR: No div found in draw method.");
                   return;
               }
 
               const sw = overlayProjection.fromLatLngToDivPixel(this.bounds.getSouthWest())!;
               const ne = overlayProjection.fromLatLngToDivPixel(this.bounds.getNorthEast())!;
 
-              this.div.style.left = `${sw.x}px`;
-              this.div.style.top = `${ne.y}px`;
-              this.div.style.width = `${ne.x - sw.x}px`;
-              this.div.style.height = `${sw.y - ne.y}px`;
+              if (sw && ne) {
+                this.div.style.left = `${sw.x}px`;
+                this.div.style.top = `${ne.y}px`;
+                this.div.style.width = `${ne.x - sw.x}px`;
+                this.div.style.height = `${sw.y - ne.y}px`;
+              } else {
+                 console.error("[MapView] ERROR: Could not calculate sw or ne points for projection.");
+              }
           }
 
           onRemove() {
               if (this.div) {
                   (this.div.parentNode as HTMLElement).removeChild(this.div);
                   delete this.div;
+                  console.log("[MapView] LOG: CanvasOverlay onRemove complete.");
               }
           }
       }
 
       const renderOverlay = async () => {
         try {
-          console.log(`[MapView] Fetching and rendering GeoTIFF from: ${visualizationData.annualSolarFluxUrl}`);
+          console.log(`[MapView] LOG: Fetching and rendering GeoTIFF from: ${visualizationData.annualSolarFluxUrl}`);
           const { sw, ne } = visualizationData.boundingBox!;
           const bounds = new google.maps.LatLngBounds(
             new google.maps.LatLng(sw.lat, sw.lng),
@@ -171,22 +188,26 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
             throw new Error('GeoTIFF rendering returned null canvas.');
           }
 
-          console.log("[MapView] GeoTIFF rendered to canvas successfully.");
+          console.log("[MapView] LOG: GeoTIFF rendered to canvas successfully.");
           const overlay = new CanvasOverlay(canvas, bounds);
           overlay.setMap(map);
-          console.log("[MapView] Canvas overlay added to the map.");
+          console.log("[MapView] LOG: Canvas overlay has been set on the map.");
 
         } catch (err: any) {
           const errorMessage = err instanceof Error ? err.message : String(err);
-          console.error('[MapView] Failed to render solar overlay:', errorMessage);
-          setError('Could not display the solar potential overlay. The data might be unavailable for this specific location.');
+          console.error('[MapView] ERROR: Failed to render solar overlay:', errorMessage);
+          setError(`Could not display the solar potential overlay. ${errorMessage}`);
         } finally {
           setIsRenderingOverlay(false);
-          console.log("[MapView] Overlay rendering process finished.");
+          console.log("[MapView] LOG: Overlay rendering process finished.");
         }
       };
 
       renderOverlay();
+    } else {
+        if (!map) console.log("[MapView] LOG: Waiting for map to be initialized.");
+        if (!visualizationData?.annualSolarFluxUrl) console.log("[MapView] LOG: Waiting for annualSolarFluxUrl in visualizationData.");
+        if (!visualizationData?.boundingBox) console.log("[MapView] LOG: Waiting for boundingBox in visualizationData.");
     }
   }, [map, visualizationData, API_KEY]);
   
