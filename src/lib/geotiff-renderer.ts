@@ -27,7 +27,7 @@ const ironPalette = [
     '#82FF00', '#82FF00', '#82FF00', '#85FF03', '#87FF06', '#8AFF09',
     '#8DFF0C', '#90FF0F', '#92FF12', '#95FF15', '#98FF18', '#9BFF1B',
     '#9DFF1E', '#A0FF21', '#A3FF24', '#A6FF27', '#A8FF2A', '#ABFF2D',
-    '#AEFF30', '#B1FF33', '#B3FF36', '#B6FF39', '#B9FF3C', '#BCFF3F',
+    '#AEFF30', '#B1FF33', '#B3FF36', '#B6FF39', '#BCFF3F',
     '#BFFFE42', '#C1FF45', '#C4FF48', '#C7FF4B', '#CAFF4E', '#CCFF51',
     '#CFFF54', '#D2FF57', '#D5FF5A', '#D8FF5D', '#DBFF60', '#DDFF63',
     '#E0FF66', '#E3FF69', '#E6FF6C', '#E8FF6F', '#EBFF72', '#EEFF75',
@@ -71,39 +71,46 @@ export async function renderGeoTiff(
     url: string,
     apiKey: string
 ): Promise<HTMLCanvasElement> {
-    console.log('[GeoTiffRenderer] Starting GeoTIFF processing.');
+    console.log('[GeoTiffRenderer] LOG: Starting GeoTIFF processing.');
     
     let tiff;
     try {
         const fullUrl = `${url}&key=${apiKey}`;
-        console.log(`[GeoTiffRenderer] Fetching GeoTIFF from URL: ${fullUrl}`);
-        tiff = await fromUrl(fullUrl);
-        console.log('[GeoTiffRenderer] Successfully fetched GeoTIFF data.');
+        console.log(`[GeoTiffRenderer] LOG: Fetching GeoTIFF from URL: ${fullUrl}`);
+        const response = await fetch(fullUrl);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to fetch GeoTIFF: ${response.status} ${response.statusText}. Details: ${errorText}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        console.log('[GeoTiffRenderer] LOG: GeoTIFF data fetched successfully.');
+        tiff = await fromArrayBuffer(arrayBuffer);
+        console.log('[GeoTiffRenderer] LOG: GeoTIFF parsed from ArrayBuffer.');
     } catch (e) {
-        console.error('[GeoTiffRenderer] Failed to fetch or load GeoTIFF:', e);
-        throw new Error('Could not download GeoTIFF data from the provided URL.');
+        console.error('[GeoTiffRenderer] ERROR: Failed to fetch or load GeoTIFF:', e);
+        throw new Error('Could not download or parse GeoTIFF data from the provided URL.');
     }
 
     let image;
     try {
-        console.log('[GeoTiffRenderer] Reading image from TIFF file.');
+        console.log('[GeoTiffRenderer] LOG: Reading image from TIFF file.');
         image = await tiff.getImage();
-        console.log(`[GeoTiffRenderer] Image details: width=${image.getWidth()}, height=${image.getHeight()}.`);
+        console.log(`[GeoTiffRenderer] LOG: Image details: width=${image.getWidth()}, height=${image.getHeight()}.`);
     } catch(e) {
-        console.error('[GeoTiffRenderer] Failed to get image from TIFF:', e);
+        console.error('[GeoTiffRenderer] ERROR: Failed to get image from TIFF:', e);
         throw new Error('Could not parse image data from the GeoTIFF file.');
     }
     
     let rasterData;
     try {
-        console.log('[GeoTiffRenderer] Reading raster data from image.');
+        console.log('[GeoTiffRenderer] LOG: Reading raster data from image.');
         rasterData = await image.readRasters();
         if (!rasterData || !rasterData[0]) {
             throw new Error('Raster data is empty or invalid.');
         }
-        console.log(`[GeoTiffRenderer] Successfully read raster data with ${rasterData.length} bands.`);
+        console.log(`[GeoTiffRenderer] LOG: Successfully read raster data with ${rasterData.length} bands.`);
     } catch (e) {
-        console.error('[GeoTiffRenderer] Failed to read raster data:', e);
+        console.error('[GeoTiffRenderer] ERROR: Failed to read raster data:', e);
         throw new Error('Could not read raster data from the GeoTIFF image.');
     }
     
@@ -113,11 +120,11 @@ export async function renderGeoTiff(
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
-        console.error('[GeoTiffRenderer] Could not get 2D context from canvas.');
+        console.error('[GeoTiffRenderer] ERROR: Could not get 2D context from canvas.');
         throw new Error('Failed to create canvas context for rendering.');
     }
     
-    console.log('[GeoTiffRenderer] Starting to render raster data to canvas.');
+    console.log('[GeoTiffRenderer] LOG: Starting to render raster data to canvas.');
     const imageData = ctx.createImageData(canvas.width, canvas.height);
     
     // Using a simplified palette for annual flux
@@ -145,7 +152,7 @@ export async function renderGeoTiff(
     }
 
     ctx.putImageData(imageData, 0, 0);
-    console.log('[GeoTiffRenderer] Successfully rendered GeoTIFF to canvas.');
+    console.log('[GeoTiffRenderer] LOG: Successfully rendered GeoTIFF to canvas.');
 
     return canvas;
 }
