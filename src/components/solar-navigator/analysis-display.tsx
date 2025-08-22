@@ -24,7 +24,7 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
   const { potential } = result;
   
   const viabilityScore = potential.sunshineQuantiles && potential.sunshineQuantiles.length > 0
-    ? Math.round(potential.sunshineQuantiles[Math.floor(potential.sunshineQuantiles.length * 0.8)] / 20) // Scaled to 100
+    ? Math.round(potential.sunshineQuantiles[Math.floor(potential.sunshineQuantiles.length * 0.8)] / (potential.maxSunshineHoursPerYear || 2000) * 100)
     : 75; // Default score
 
   const twentyYearSavings = potential.financialAnalysis?.cashPurchaseSavings?.savings?.savingsYear20?.units || 0;
@@ -84,7 +84,7 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
               <AccordionTrigger className="text-lg font-semibold">Financial Summary</AccordionTrigger>
               <AccordionContent>
                 {potential.financialAnalysis ? (
-                   <FinancialSummary financialAnalysis={potential.financialAnalysis} yearlyEnergyDcKwh={potential.yearlyEnergyDcKwh || 0} />
+                   <FinancialSummary financialAnalysis={potential.financialAnalysis} solarPotential={potential} />
                 ) : (
                   <p className="text-muted-foreground">Financial analysis data is not available for this location.</p>
                 )}

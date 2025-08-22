@@ -61,6 +61,7 @@ export type SolarPotentialAssessmentOutput = {
   imageryDate?: any;
   imageryProcessedDate?: any;
   imageryQuality?: string;
+  panelLifetimeYears?: number;
 };
 
 // Directly maps to the Solar API's dataLayers response

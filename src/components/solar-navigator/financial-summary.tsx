@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { type FinancialAnalysis } from '@/lib/types';
+import { type FinancialAnalysis, type SolarPotentialAssessmentOutput } from '@/lib/types';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,26 +11,25 @@ import { Table, TableBody, TableCell, TableRow, TableHead, TableHeader } from '@
 
 interface FinancialSummaryProps {
   financialAnalysis: FinancialAnalysis;
-  yearlyEnergyDcKwh: number;
+  solarPotential: SolarPotentialAssessmentOutput;
 }
 
 // Constants from the proposal
 const DC_TO_AC_DERATE = 0.85;
-const EFFICIENCY_DEPRECIATION_RATE = 0.005;
-const PANEL_LIFETIME_YEARS = 20;
 
-export default function FinancialSummary({ financialAnalysis, yearlyEnergyDcKwh }: FinancialSummaryProps) {
+export default function FinancialSummary({ financialAnalysis, solarPotential }: FinancialSummaryProps) {
   const [monthlyBill, setMonthlyBill] = useState(financialAnalysis?.monthlyBill?.units || 150);
   const [utilityRate, setUtilityRate] = useState(0.18); // National average placeholder, could be an input
   
-  const annualEnergyAcKwh = yearlyEnergyDcKwh * DC_TO_AC_DERATE;
+  const annualEnergyAcKwh = (solarPotential.yearlyEnergyDcKwh || 0) * DC_TO_AC_DERATE;
   
-  const lifetimeProduction = Array.from({ length: PANEL_LIFETIME_YEARS }).reduce((acc, _, i) => {
-    return acc + (annualEnergyAcKwh * Math.pow(1 - EFFICIENCY_DEPRECIATION_RATE, i));
-  }, 0);
-
+  // Use a more direct lifetime savings if available, otherwise estimate
   const lifetimeSavings = financialAnalysis?.cashPurchaseSavings?.savings?.savingsLifetime?.units || 0;
+  const lifetimeProduction = annualEnergyAcKwh * (solarPotential.panelLifetimeYears || 20); // Simplified for now
+
   const costWithPanels = financialAnalysis?.cashPurchaseSavings?.outOfPocketCost?.units || 0;
+  const rebateValue = financialAnalysis?.cashPurchaseSavings?.rebateValue?.units || 0;
+  const netSystemCost = costWithPanels - rebateValue;
 
   return (
     <div className="space-y-8 p-4">
@@ -82,11 +81,11 @@ export default function FinancialSummary({ financialAnalysis, yearlyEnergyDcKwh 
             </TableRow>
             <TableRow>
               <TableCell className="font-medium">Federal & State Incentives</TableCell>
-              <TableCell className="text-right text-green-600">-{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(financialAnalysis?.cashPurchaseSavings?.rebateValue?.units || 0)}</TableCell>
+              <TableCell className="text-right text-green-600">-{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(rebateValue)}</TableCell>
             </TableRow>
             <TableRow className="bg-muted/50">
               <TableCell className="font-bold">Net System Cost</TableCell>
-              <TableCell className="text-right font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(financialAnalysis?.cashPurchaseSavings?.upfrontCost?.units || 0)}</TableCell>
+              <TableCell className="text-right font-bold">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(netSystemCost)}</TableCell>
             </TableRow>
              <TableRow>
               <TableCell className="font-medium">

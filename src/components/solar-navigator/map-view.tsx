@@ -45,7 +45,7 @@ const loadGoogleMapsScript = () => {
       script.defer = true;
 
       (window as any).initMap = () => {
-        console.log("[MapView] Google Maps script initialized via callback.");
+        console.log("[MapView] LOG: Google Maps script initialized via callback.");
         resolve();
         delete (window as any).initMap;
       };
@@ -55,7 +55,7 @@ const loadGoogleMapsScript = () => {
         if (script.parentNode) {
           script.parentNode.removeChild(script);
         }
-        console.error("[MapView] Failed to load Google Maps script:", e);
+        console.error("[MapView] ERROR: Failed to load Google Maps script:", e);
         reject(new Error("Google Maps script could not be loaded."));
       };
 
@@ -114,7 +114,6 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       console.log("[MapView] LOG: Map and visualization data are ready. Starting overlay render.");
       console.log("[MapView] LOG: Received visualizationData:", visualizationData);
       
-      // Define the overlay class inside the effect to ensure google.maps is loaded
       class CanvasOverlay extends window.google.maps.OverlayView {
           private canvas: HTMLCanvasElement;
           private bounds: google.maps.LatLngBounds;
@@ -174,7 +173,6 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       }
 
       const renderOverlay = async () => {
-        // Clean up previous overlay if it exists
         if (overlayRef.current) {
             overlayRef.current.setMap(null);
             console.log("[MapView] LOG: Removed previous overlay.");
@@ -200,7 +198,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
           console.log("[MapView] LOG: GeoTIFF rendered to canvas successfully.");
           const overlay = new CanvasOverlay(canvas, bounds);
           overlay.setMap(map);
-          overlayRef.current = overlay; // Store the new overlay instance
+          overlayRef.current = overlay;
           console.log("[MapView] LOG: Canvas overlay has been set on the map.");
 
         } catch (err: any) {
@@ -219,7 +217,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
         if (!visualizationData?.annualSolarFluxUrl) console.log("[MapView] LOG: Waiting for annualSolarFluxUrl in visualizationData.");
         if (!visualizationData?.boundingBox) console.log("[MapView] LOG: Waiting for boundingBox in visualizationData.");
     }
-  }, [map, visualizationData]);
+  }, [map, visualizationData, API_KEY]);
   
   if (!API_KEY) {
     return (
