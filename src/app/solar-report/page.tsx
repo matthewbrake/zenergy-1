@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -8,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader } from 'lucide-react';
 import { appConfig } from '@/lib/config';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 
 
 export default function SolarReportPage() {
