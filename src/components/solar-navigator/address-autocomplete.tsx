@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, MapPin, Loader } from 'lucide-react';
 import { CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { appConfig } from '@/lib/config';
+
 
 interface AddressAutocompleteProps {
   onSubmit: (data: AddressData) => void;
@@ -148,8 +150,8 @@ export default function AddressAutocomplete({ onSubmit, error }: AddressAutocomp
   return (
     <>
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Property Address</CardTitle>
-        <CardDescription>Enter the address for the solar potential analysis.</CardDescription>
+        <CardTitle className="text-2xl">{appConfig.addressEntry.title}</CardTitle>
+        <CardDescription>{appConfig.addressEntry.description}</CardDescription>
       </CardHeader>
       <div className="p-4">
         <form onSubmit={handleFormSubmit} className="space-y-4">

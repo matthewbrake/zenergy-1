@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { type AnalysisResult, type AddressData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import MetricCard from './metric-card';
@@ -10,6 +10,7 @@ import FinancialSummary from './financial-summary';
 import { Sun, Zap, Target, RefreshCw, Leaf, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { appConfig } from '@/lib/config';
 
 
 interface AnalysisDisplayProps {
@@ -19,6 +20,7 @@ interface AnalysisDisplayProps {
 }
 
 export default function AnalysisDisplay({ result, addressData, onReset }: AnalysisDisplayProps) {
+  const router = useRouter();
   const { potential } = result;
   
   const viabilityScore = potential.sunshineQuantiles && potential.sunshineQuantiles.length > 0
@@ -31,7 +33,7 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
   return (
     <div className="w-full space-y-8">
       <header className="text-center">
-        <h2 className="text-3xl font-bold text-primary">Your Personalized Solar Report</h2>
+        <h2 className="text-3xl font-bold text-primary">{appConfig.solarReport.reportTitle}</h2>
         <p className="text-muted-foreground mt-1">{addressData.address}</p>
       </header>
 
@@ -102,10 +104,8 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
         <Button onClick={onReset} size="lg" variant="outline">
           <RefreshCw className="mr-2 h-4 w-4" /> Start New Analysis
         </Button>
-        <Button asChild size="lg">
-          <Link href="/financial-details">
-            Continue to Financial Details <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
+        <Button onClick={() => router.push('/financial-details')} size="lg">
+          Continue to Financial Details <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
     </div>
