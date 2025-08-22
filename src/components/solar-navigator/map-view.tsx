@@ -71,23 +71,24 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRenderingOverlay, setIsRenderingOverlay] = useState(false);
+  const overlayRef = useRef<any>(null); // To hold the overlay instance
 
   useEffect(() => {
-    console.log('[MapView] Component mounted. Loading Google Maps script...');
+    console.log('[MapView] LOG: Component mounted. Loading Google Maps script...');
     loadGoogleMapsScript()
       .then(() => {
-        console.log('[MapView] Google Maps script loaded successfully.');
+        console.log('[MapView] LOG: Google Maps script loaded successfully.');
         setIsApiLoaded(true)
       })
       .catch(err => {
-        console.error("[MapView] Failed to load Google Maps script from useEffect:", err);
+        console.error("[MapView] ERROR: Failed to load Google Maps script from useEffect:", err);
         setError("Mapping service could not be loaded.");
       });
   }, []);
 
   useEffect(() => {
     if (isApiLoaded && mapRef.current && !map) {
-      console.log("[MapView] API loaded, initializing map at:", location);
+      console.log("[MapView] LOG: API loaded, initializing map at:", location);
       const mapInstance = new window.google.maps.Map(mapRef.current, {
         center: location,
         zoom: 20,
@@ -102,7 +103,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
         position: location,
         map: mapInstance,
       });
-      console.log("[MapView] Map initialized and marker placed.");
+      console.log("[MapView] LOG: Map initialized and marker placed.");
     }
   }, [isApiLoaded, location, map]);
 
@@ -113,6 +114,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       console.log("[MapView] LOG: Map and visualization data are ready. Starting overlay render.");
       console.log("[MapView] LOG: Received visualizationData:", visualizationData);
       
+      // Define the overlay class inside the effect to ensure google.maps is loaded
       class CanvasOverlay extends window.google.maps.OverlayView {
           private canvas: HTMLCanvasElement;
           private bounds: google.maps.LatLngBounds;
@@ -172,6 +174,12 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       }
 
       const renderOverlay = async () => {
+        // Clean up previous overlay if it exists
+        if (overlayRef.current) {
+            overlayRef.current.setMap(null);
+            console.log("[MapView] LOG: Removed previous overlay.");
+        }
+
         try {
           console.log(`[MapView] LOG: Fetching and rendering GeoTIFF from: ${visualizationData.annualSolarFluxUrl}`);
           const { sw, ne } = visualizationData.boundingBox!;
@@ -192,6 +200,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
           console.log("[MapView] LOG: GeoTIFF rendered to canvas successfully.");
           const overlay = new CanvasOverlay(canvas, bounds);
           overlay.setMap(map);
+          overlayRef.current = overlay; // Store the new overlay instance
           console.log("[MapView] LOG: Canvas overlay has been set on the map.");
 
         } catch (err: any) {
@@ -210,7 +219,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
         if (!visualizationData?.annualSolarFluxUrl) console.log("[MapView] LOG: Waiting for annualSolarFluxUrl in visualizationData.");
         if (!visualizationData?.boundingBox) console.log("[MapView] LOG: Waiting for boundingBox in visualizationData.");
     }
-  }, [map, visualizationData, API_KEY]);
+  }, [map, visualizationData]);
   
   if (!API_KEY) {
     return (
