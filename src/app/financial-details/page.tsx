@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 import { UploadCloud, File, X, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { appConfig } from '@/lib/config';
