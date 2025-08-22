@@ -92,6 +92,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       const mapInstance = new window.google.maps.Map(mapRef.current, {
         center: location,
         zoom: 20,
+        mapId: 'SATELLITE',
         mapTypeId: 'satellite',
         disableDefaultUI: true,
         zoomControl: true,
