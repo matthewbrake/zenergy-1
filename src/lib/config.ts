@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview
  * This file contains the central configuration for the application.
@@ -64,7 +65,7 @@ const solarReport = {
 // =================================================================
 const financialDetails = {
     title: 'Financial Details',
-    description: 'Help us refine your savings estimate by providing your recent energy bills.',
+    description: 'Help us refine your savings estimate by providing your recent energy usage.',
     formspreeEndpoint: 'https://formspree.io/f/mrblnyld', // <-- YOUR FORMSpree ENDPOINT HERE
     monthlyBill: {
         title: 'Your Energy Usage',
@@ -74,13 +75,6 @@ const financialDetails = {
         step: 5,
         defaultValue: 150,
     },
-    fileUpload: {
-        title: 'Upload Your Bills',
-        description: 'Please upload your last 1-4 electricity bills (PDF or images). The most recent bill is required.',
-        requiredCount: 1,
-        maxFiles: 4,
-        labels: ['Last Month (Required)', '2 Months Ago', '3 Months Ago', '4 Months Ago'],
-    }
 };
 
 // =================================================================
