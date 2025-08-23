@@ -43,7 +43,7 @@ export default function ServiceSelectionPage() {
   const onSubmit = (data: ProspectData) => {
     if (!selectedService) {
         setSelectionError('Please select a service before continuing.');
-        return;
+        return false;
     }
     setSelectionError(null);
     setProspectData(data);
@@ -58,6 +58,7 @@ export default function ServiceSelectionPage() {
     } else {
         router.push(selectedService.path);
     }
+    return true;
   };
 
   const handleServiceSelect = (service: { name: string; path: string; }) => {
@@ -95,7 +96,22 @@ export default function ServiceSelectionPage() {
             </CardHeader>
             <CardContent>
              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <form 
+                    action="https://formspree.io/f/mrblnyld"
+                    method="POST"
+                    onSubmit={(e) => {
+                        const isValid = form.trigger();
+                        if (!isValid || !selectedService) {
+                            e.preventDefault();
+                            if (!selectedService) {
+                                setSelectionError('Please select a service before continuing.');
+                            }
+                        } else {
+                            onSubmit(form.getValues());
+                        }
+                    }}
+                    className="space-y-8"
+                >
                     {/* Step 1: Service Selection */}
                     <div className="space-y-4">
                         <h3 className="text-base font-semibold">{appConfig.serviceSelection.step1Title}</h3>
@@ -143,9 +159,11 @@ export default function ServiceSelectionPage() {
                                     <FormItem>
                                       <FormLabel>{appConfig.prospectForm.stateLabel}</FormLabel>
                                       <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <SelectTrigger>
-                                          <SelectValue placeholder={appConfig.prospectForm.statePlaceholder} />
-                                        </SelectTrigger>
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder={appConfig.prospectForm.statePlaceholder} />
+                                          </SelectTrigger>
+                                        </FormControl>
                                         <SelectContent>
                                           {US_STATES.map(state => <SelectItem key={state.abbreviation} value={state.abbreviation}>{state.name}</SelectItem>)}
                                         </SelectContent>

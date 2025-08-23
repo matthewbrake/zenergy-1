@@ -118,11 +118,6 @@ class CanvasOverlay extends google.maps.OverlayView {
     }
     
     setMap(map: google.maps.Map | null) {
-        // This is a bit of a hack to get around the fact that
-        // the default setMap doesn't always trigger onRemove correctly.
-        if (!map && this.div) {
-            this.onRemove();
-        }
         super.setMap(map);
     }
 }
@@ -134,8 +129,8 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Loading Map...');
   const [layers, setLayers] = useState<LayerState[]>([]);
-  const layerOverlaysRef = useRef<{[key in LayerType]?: CanvasOverlay}>({});
-
+  
+  const overlaysRef = useRef<Map<LayerType, CanvasOverlay>>(new Map());
 
   useEffect(() => {
     loadGoogleMapsScript()
@@ -167,6 +162,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
         tilt: 0,
       });
       setMap(mapInstance);
+      setLoadingMessage('');
       new window.google.maps.marker.AdvancedMarkerElement({
         position: location,
         map: mapInstance,
@@ -193,7 +189,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     );
   
     layers.forEach(async (layer) => {
-      const existingOverlay = layerOverlaysRef.current[layer.id];
+      const existingOverlay = overlaysRef.current.get(layer.id);
 
       if (layer.active && !existingOverlay) {
         // Activate layer
@@ -207,7 +203,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
           const canvas = await renderGeoTiff(layer.url, API_KEY!, layer.id);
           if (canvas) {
             const overlay = new CanvasOverlay(canvas, bounds);
-            layerOverlaysRef.current[layer.id] = overlay;
+            overlaysRef.current.set(layer.id, overlay);
             overlay.setMap(map);
           } else {
              throw new Error('GeoTIFF rendering returned null.');
@@ -221,7 +217,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       } else if (!layer.active && existingOverlay) {
         // Deactivate layer
         existingOverlay.setMap(null);
-        delete layerOverlaysRef.current[layer.id];
+        overlaysRef.current.delete(layer.id);
       }
     });
   }, [layers, map, visualizationData, API_KEY]);
@@ -287,3 +283,5 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     </div>
   );
 }
+
+    

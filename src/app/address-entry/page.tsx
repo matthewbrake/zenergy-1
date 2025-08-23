@@ -9,9 +9,10 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, MapPin, Loader } from 'lucide-react';
-import { CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { AlertCircle, MapPin, Loader, SkipForward } from 'lucide-react';
+import { CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import useLocalStorage from '@/hooks/use-local-storage';
+import { Button } from '@/components/ui/button';
 
 // --- AddressAutocomplete Component ---
 interface AddressAutocompleteProps {
@@ -71,6 +72,7 @@ const loadGoogleMapsScript = () => {
 };
 
 function AddressAutocomplete({ onSubmit, error, initialAddress }: AddressAutocompleteProps) {
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isApiLoaded, setIsApiLoaded] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -132,6 +134,10 @@ function AddressAutocomplete({ onSubmit, error, initialAddress }: AddressAutocom
     setSelectionError("Please select an address from the suggestions list before submitting.");
   };
 
+  const skipStep = () => {
+    router.push(appConfig.financialDetails.nextPath);
+  }
+
   if (!API_KEY) {
     return (
       <Alert variant="destructive">
@@ -150,7 +156,7 @@ function AddressAutocomplete({ onSubmit, error, initialAddress }: AddressAutocom
         <CardTitle className="text-2xl">{appConfig.addressEntry.title}</CardTitle>
         <CardDescription>{appConfig.addressEntry.description}</CardDescription>
       </CardHeader>
-      <div className="p-4">
+      <CardContent className="p-4 sm:p-8">
         <form onSubmit={handleFormSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="address">{appConfig.addressEntry.addressLabel}</Label>
@@ -179,7 +185,13 @@ function AddressAutocomplete({ onSubmit, error, initialAddress }: AddressAutocom
             {appConfig.addressEntry.instructions}
           </p>
         </form>
-      </div>
+      </CardContent>
+      <CardFooter className="flex justify-center">
+          <Button onClick={skipStep} variant="link">
+             <SkipForward className="mr-2 h-4 w-4" />
+             Skip to Next Step
+          </Button>
+      </CardFooter>
     </>
   );
 }
@@ -209,11 +221,11 @@ export default function AddressEntryPage() {
             )}
         </header>
         <Card className="w-full shadow-lg border-2 border-primary/20">
-          <CardContent className="p-4 sm:p-8">
             <AddressAutocomplete onSubmit={handleAddressSubmit} initialAddress={initialAddress} />
-          </CardContent>
         </Card>
       </div>
     </main>
   );
 }
+
+    
