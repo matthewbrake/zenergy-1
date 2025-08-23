@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { appConfig } from '@/lib/config';
-import { CheckCircle, Mail, Printer, RotateCcw, Home, Sun } from 'lucide-react';
+import { CheckCircle, Mail, Printer, RotateCcw, Home, Sun, Loader } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { useEffect, useState } from 'react';
@@ -23,11 +23,17 @@ export default function ConfirmationPage() {
   const [analysisResult] = useLocalStorage<AnalysisResult | null>('analysisResult', null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // This effect ensures that localStorage-dependent UI is only rendered on the client.
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // This effect runs once when the component mounts to submit all collected data.
   useEffect(() => {
     const submitAllData = async () => {
-      // Prevent re-submission if already submitting or submitted
+      // Prevent re-submission if already submitting or if there's no data to submit.
       if (isSubmitting || !prospectData) return;
       
       setIsSubmitting(true);
@@ -74,9 +80,12 @@ export default function ConfirmationPage() {
       }
     };
     
-    submitAllData();
+    // Only run submission logic on the client side.
+    if (isClient) {
+        submitAllData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, [isClient]); // Depends on isClient to ensure it runs after client-side mount.
 
 
   const handlePrint = () => {
@@ -128,15 +137,25 @@ export default function ConfirmationPage() {
   
   const renderFinancialDetails = () => {
     if (!financialData) return null;
+    const creditScore = appConfig.financialDetails.creditScoreOptions.find(o => o.value === financialData.creditScore)?.label;
+    const interestLevel = appConfig.financialDetails.interestLevelOptions.find(o => o.value === financialData.interestLevel)?.label;
+
     return (
         <div className="space-y-1 text-center">
             {financialData.monthlyBill && <p><strong>Avg. Monthly Bill:</strong> ${financialData.monthlyBill}</p>}
-            {financialData.creditScore && <p><strong>Credit Score:</strong> {appConfig.financialDetails.creditScoreOptions.find(o => o.value === financialData.creditScore)?.label}</p>}
-            {financialData.interestLevel && <p><strong>Interest Level:</strong> {appConfig.financialDetails.interestLevelOptions.find(o => o.value === financialData.interestLevel)?.label}</p>}
+            {creditScore && <p><strong>Credit Score:</strong> {creditScore}</p>}
+            {interestLevel && <p><strong>Interest Level:</strong> {interestLevel}</p>}
         </div>
     )
   }
 
+  const renderLoadingState = () => (
+    <div className="flex flex-col items-center justify-center text-center p-8 h-96">
+      <Loader className="h-12 w-12 animate-spin text-primary mb-4" />
+      <h2 className="text-2xl font-semibold text-foreground mb-2">Finalizing Your Quote...</h2>
+      <p className="text-muted-foreground">Please wait a moment.</p>
+    </div>
+  );
 
   return (
     <main className="flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-8 bg-background">
@@ -147,64 +166,68 @@ export default function ConfirmationPage() {
             )}
         </header>
         <Card className="w-full shadow-lg border-2 border-primary/20">
-          <CardHeader className="text-center items-center">
-            <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
-            <CardTitle className="text-3xl">{appConfig.confirmation.title}</CardTitle>
-            <CardDescription>{appConfig.confirmation.description}</CardDescription>
-          </CardHeader>
-          <CardContent className="text-center space-y-6">
-            
-            <div className="p-6 rounded-lg bg-muted/50 border text-left space-y-3">
-                <h3 className="font-semibold mb-4 text-lg text-center">{appConfig.confirmation.summaryTitle}</h3>
+          {!isClient ? renderLoadingState() : (
+            <>
+              <CardHeader className="text-center items-center">
+                <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
+                <CardTitle className="text-3xl">{appConfig.confirmation.title}</CardTitle>
+                <CardDescription>{appConfig.confirmation.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="text-center space-y-6">
                 
-                {/* Prospect Details */}
-                {prospectData && (
-                    <div className="space-y-1">
-                        <p><strong>{appConfig.confirmation.summaryNameLabel}:</strong> {prospectData.firstName} {prospectData.lastName}</p>
-                        <p><strong>Email:</strong> {prospectData.email}</p>
-                        <p><strong>Phone:</strong> {prospectData.phone}</p>
-                    </div>
-                )}
-                
-                <hr className="my-4 border-dashed" />
+                <div className="p-6 rounded-lg bg-muted/50 border text-left space-y-3">
+                    <h3 className="font-semibold mb-4 text-lg text-center">{appConfig.confirmation.summaryTitle}</h3>
+                    
+                    {/* Prospect Details */}
+                    {prospectData && (
+                        <div className="space-y-1">
+                            <p><strong>{appConfig.confirmation.summaryNameLabel}:</strong> {prospectData.firstName} {prospectData.lastName}</p>
+                            <p><strong>Email:</strong> {prospectData.email}</p>
+                            <p><strong>Phone:</strong> {prospectData.phone}</p>
+                        </div>
+                    )}
+                    
+                    <hr className="my-4 border-dashed" />
 
-                {/* Service Specific Details */}
-                <div className="space-y-1 text-center">
-                   {renderServiceSpecificDetails()}
+                    {/* Service Specific Details */}
+                    <div className="space-y-1 text-center">
+                       {renderServiceSpecificDetails()}
+                    </div>
+
+                     <hr className="my-4 border-dashed" />
+                    
+                    {/* Financial Details */}
+                    {renderFinancialDetails()}
+                    
+                    <hr className="my-4 border-dashed" />
+
+                    {/* Appointment Details */}
+                    {appointmentData && (
+                        <div className="space-y-1 text-center">
+                            <p><strong>{appConfig.confirmation.summaryAppointmentLabel}:</strong> {appointmentData.date} at {appointmentData.time}</p>
+                        </div>
+                    )}
                 </div>
 
-                 <hr className="my-4 border-dashed" />
-                
-                {/* Financial Details */}
-                {renderFinancialDetails()}
-                
-                <hr className="my-4 border-dashed" />
+                <p className="text-muted-foreground">{appConfig.confirmation.nextSteps}</p>
 
-                {/* Appointment Details */}
-                {appointmentData && (
-                    <div className="space-y-1 text-center">
-                        <p><strong>{appConfig.confirmation.summaryAppointmentLabel}:</strong> {appointmentData.date} at {appointmentData.time}</p>
-                    </div>
-                )}
-            </div>
-
-            <p className="text-muted-foreground">{appConfig.confirmation.nextSteps}</p>
-
-            <div className="flex justify-center gap-4 pt-4">
-              <Button onClick={handleEmail} variant="outline">
-                <Mail className="mr-2 h-4 w-4" /> {appConfig.confirmation.emailButton}
-              </Button>
-              <Button onClick={handlePrint} variant="outline">
-                <Printer className="mr-2 h-4 w-4" /> {appConfig.confirmation.printButton}
-              </Button>
-            </div>
-          </CardContent>
-          <div className="p-6 pt-0 flex justify-center">
-             <Button onClick={startOver} size="lg">
-              <RotateCcw className="mr-2 h-4 w-4" />
-              {appConfig.confirmation.startOverButton}
-             </Button>
-          </div>
+                <div className="flex justify-center gap-4 pt-4">
+                  <Button onClick={handleEmail} variant="outline">
+                    <Mail className="mr-2 h-4 w-4" /> {appConfig.confirmation.emailButton}
+                  </Button>
+                  <Button onClick={handlePrint} variant="outline">
+                    <Printer className="mr-2 h-4 w-4" /> {appConfig.confirmation.printButton}
+                  </Button>
+                </div>
+              </CardContent>
+              <div className="p-6 pt-0 flex justify-center">
+                 <Button onClick={startOver} size="lg">
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  {appConfig.confirmation.startOverButton}
+                 </Button>
+              </div>
+            </>
+          )}
         </Card>
       </div>
     </main>
