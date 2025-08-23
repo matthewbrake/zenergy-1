@@ -34,7 +34,7 @@ export default function ProspectFormPage() {
         setProspectData(data);
         // If a service choice was made (e.g., Roofing), go to the other services page.
         // Otherwise, it's the solar path, so go to address entry.
-        const nextPath = serviceChoice ? appConfig.prospectForm.nextPath.other : appConfig.prospectForm.nextPath.solar;
+        const nextPath = serviceChoice === 'Solar' ? appConfig.prospectForm.nextPath.solar : appConfig.prospectForm.nextPath.other;
         router.push(nextPath);
     };
 
@@ -54,7 +54,7 @@ export default function ProspectFormPage() {
             <div className="w-full max-w-2xl mx-auto">
                  <header className="text-center mb-8 flex flex-col items-center">
                     {appConfig.global.logo && (
-                        <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-12 w-auto mb-4" data-ai-hint="logo" />
+                        <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-16 w-auto mb-4" data-ai-hint="logo" />
                     )}
                     {appConfig.global.displayAppName && (
                         <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>

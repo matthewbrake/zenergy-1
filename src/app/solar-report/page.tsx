@@ -96,7 +96,7 @@ export default function SolarReportPage() {
        <div className="w-full max-w-6xl mx-auto">
         <header className="text-center mb-8 flex flex-col items-center">
             {appConfig.global.logo && (
-              <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-12 w-auto mb-4" data-ai-hint="logo" />
+              <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-16 w-auto mb-4" data-ai-hint="logo" />
             )}
             {appConfig.global.displayAppName && (
                 <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>

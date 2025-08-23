@@ -21,21 +21,26 @@
  *
  * -------------------------------------------------------------------------------------------------
  *
- * 1. SOLAR PATH:
- *    - Step 1: `/` (Service Selection) -> User clicks "Solar"
- *    - Step 2: `/address-entry` -> User enters property address for analysis.
- *    - Step 3: `/solar-report` -> Displays API results (map, panels, savings).
- *    - Step 4: `/financial-details` -> User provides bill, credit, and interest info.
- *    - Step 5: `/scheduling` -> User books an appointment.
- *    - Step 6: `/confirmation` -> Shows a summary of all collected data.
+ * UNIFIED STARTING POINT (New Flow):
  *
- * 2. OTHER SERVICES PATH (Roofing, HVAC, Smart Home):
- *    - Step 1: `/` (Service Selection) -> User clicks "Roofing", "HVAC", etc.
- *    - Step 2: `/prospect-form` -> User enters contact info.
- *    - Step 3: `/other-services` -> User describes their specific needs.
- *    - Step 4: `/financial-details` -> User provides credit and interest info (solar sections are hidden).
- *    - Step 5: `/scheduling` -> User books an appointment.
- *    - Step 6: `/confirmation` -> Shows a summary of all collected data.
+ * 1. LANDING PAGE (`/`):
+ *    - User selects a service (Solar, Roofing, etc.).
+ *    - User fills out their contact information (Name, Email, etc.).
+ *    - On submission, the application routes the user based on the selected service.
+ *
+ * 2. POST-SUBMISSION PATHS:
+ *    - SOLAR PATH:
+ *      - Step 1: `/address-entry` -> User enters property address for analysis.
+ *      - Step 2: `/solar-report` -> Displays API results (map, panels, savings).
+ *      - Step 3: `/financial-details` -> User provides bill, credit, and interest info.
+ *      - Step 4: `/scheduling` -> User books an appointment.
+ *      - Step 5: `/confirmation` -> Shows a summary of all collected data.
+ *
+ *    - OTHER SERVICES PATH (Roofing, HVAC, Smart Home):
+ *      - Step 1: `/other-services` -> User describes their specific needs.
+ *      - Step 2: `/financial-details` -> User provides credit and interest info (solar sections are hidden).
+ *      - Step 3: `/scheduling` -> User books an appointment.
+ *      - Step 4: `/confirmation` -> Shows a summary of all collected data.
  *
  * =================================================================================================
  */
@@ -57,33 +62,29 @@ const global = {
 
 
 // =================================================================
-// 2. SERVICE SELECTION PAGE (`/`)
-//    The first page the user sees, where they select a service.
+// 2. UNIFIED START & PROSPECT PAGE (`/`)
+//    The first page the user sees. It combines service selection
+//    and prospect information capture.
 // =================================================================
 const serviceSelection = {
   title: 'Welcome!',
-  description: 'What service are you interested in today?',
+  description: 'Please select a service and provide your contact information to get started.',
+  step1Title: 'Step 1: Choose Your Service',
   comingSoonText: 'Coming Soon',
   services: [
-    { name: 'Solar', icon: Sun, enabled: true, path: '/address-entry' }, // Solar path starts at address entry
-    { name: 'Roofing', icon: Home, enabled: true, path: '/prospect-form' },
-    { name: 'HVAC', icon: Wind, enabled: true, path: '/prospect-form' },
-    { name: 'Smart Home', icon: Thermometer, enabled: true, path: '/prospect-form' },
+    { name: 'Solar', icon: Sun, enabled: true, path: '/address-entry' },
+    { name: 'Roofing', icon: Home, enabled: true, path: '/other-services' },
+    { name: 'HVAC', icon: Wind, enabled: true, path: '/other-services' },
+    { name: 'Smart Home', icon: Thermometer, enabled: true, path: '/other-services' },
   ],
 };
 
-
-// =================================================================
-// 3. PROSPECT INFORMATION PAGE (`/prospect-form`)
-//    The form where the user enters their contact details. This is the
-//    first step for all non-solar paths.
-// =================================================================
 const prospectForm = {
-    title: 'Prospect Information',
-    description: "Let's start by gathering some basic information to create your profile.",
-    // For non-solar paths, this form leads to the 'other-services' page.
+    step2Title: 'Step 2: Tell Us About Yourself',
+    // These paths are now determined on the main page based on service selection
     nextPath: {
-      other: '/other-services'
+      solar: '/address-entry',
+      other: '/other-services',
     },
     // --- Form Field Labels & Placeholders ---
     firstNameLabel: 'First Name',
@@ -101,7 +102,7 @@ const prospectForm = {
 
 
 // =================================================================
-// 4. ADDRESS ENTRY PAGE (`/address-entry`)
+// 3. ADDRESS ENTRY PAGE (`/address-entry`)
 //    (SOLAR PATH ONLY) Where the user enters the property address.
 // =================================================================
 const addressEntry = {
@@ -116,7 +117,7 @@ const addressEntry = {
 
 
 // =================================================================
-// 5. SOLAR REPORT PAGE (`/solar-report`)
+// 4. SOLAR REPORT PAGE (`/solar-report`)
 //    (SOLAR PATH ONLY) Displays the results of the solar analysis.
 // =================================================================
 const solarReport = {
@@ -153,7 +154,7 @@ const solarReport = {
 
 
 // =================================================================
-// 6. OTHER SERVICES PAGE (`/other-services`)
+// 5. OTHER SERVICES PAGE (`/other-services`)
 //    (NON-SOLAR PATHS) A generic form for non-solar service requests.
 // =================================================================
 const otherServices = {
@@ -167,7 +168,7 @@ const otherServices = {
 
 
 // =================================================================
-// 7. FINANCIAL DETAILS PAGE (`/financial-details`)
+// 6. FINANCIAL DETAILS PAGE (`/financial-details`)
 //    (ALL PATHS) Gathers bill info (solar only), credit score, and
 //    interest level.
 // =================================================================
@@ -199,7 +200,7 @@ const financialDetails = {
 
 
 // =================================================================
-// 8. SCHEDULING PAGE (`/scheduling`)
+// 7. SCHEDULING PAGE (`/scheduling`)
 //    (ALL PATHS) Where the user books an appointment.
 // =================================================================
 const scheduling = {
@@ -214,7 +215,7 @@ const scheduling = {
 
 
 // =================================================================
-// 9. CONFIRMATION PAGE (`/confirmation`)
+// 8. CONFIRMATION PAGE (`/confirmation`)
 //    (ALL PATHS) The final page summarizing the user's submission.
 // =================================================================
 const confirmation = {
