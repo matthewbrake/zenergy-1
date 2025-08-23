@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { type FinancialAnalysis, type SolarPotentialAssessmentOutput } from '@/lib/types';
+import { type FinancialAnalysis, type SolarPotential } from '@/lib/types';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,21 +11,20 @@ import { Table, TableBody, TableCell, TableRow, TableHead, TableHeader } from '@
 
 interface FinancialSummaryProps {
   financialAnalysis: FinancialAnalysis;
-  solarPotential: SolarPotentialAssessmentOutput;
+  solarPotential: SolarPotential;
 }
 
-// Constants from the proposal
 const DC_TO_AC_DERATE = 0.85;
 
 export default function FinancialSummary({ financialAnalysis, solarPotential }: FinancialSummaryProps) {
   const [monthlyBill, setMonthlyBill] = useState(financialAnalysis?.monthlyBill?.units || 150);
-  const [utilityRate, setUtilityRate] = useState(0.18); // National average placeholder, could be an input
+  const [utilityRate, setUtilityRate] = useState(0.18);
+
+  const yearlyEnergyDcKwh = solarPotential.solarPanelConfigs.find(c => c.panelsCount === solarPotential.maxArrayPanelsCount)?.yearlyEnergyDcKwh || 0;
+  const annualEnergyAcKwh = yearlyEnergyDcKwh * DC_TO_AC_DERATE;
   
-  const annualEnergyAcKwh = (solarPotential.yearlyEnergyDcKwh || 0) * DC_TO_AC_DERATE;
-  
-  // Use a more direct lifetime savings if available, otherwise estimate
   const lifetimeSavings = financialAnalysis?.cashPurchaseSavings?.savings?.savingsLifetime?.units || 0;
-  const lifetimeProduction = annualEnergyAcKwh * (solarPotential.panelLifetimeYears || 20); // Simplified for now
+  const lifetimeProduction = annualEnergyAcKwh * (solarPotential.panelLifetimeYears || 20);
 
   const costWithPanels = financialAnalysis?.cashPurchaseSavings?.outOfPocketCost?.units || 0;
   const rebateValue = financialAnalysis?.cashPurchaseSavings?.rebateValue?.units || 0;

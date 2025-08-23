@@ -13,20 +13,27 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import type { VisualizeSolarDataLayersOutput } from '@/lib/types';
+import type { DataLayersResponse, LatLngBox } from '@/lib/types';
 import { renderGeoTiff } from '@/lib/geotiff-renderer';
 
 interface MapViewProps {
   location: { lat: number; lng: number };
-  visualizationData?: VisualizeSolarDataLayersOutput;
+  visualizationData?: DataLayersResponse;
 }
 
-type Layer = 'buildingMask' | 'annualFlux' | 'monthlyFlux' | 'hourlyShade';
-type ActiveLayers = { [key in Layer]?: boolean };
+type LayerType = 'buildingMask' | 'annualFlux' | 'monthlyFlux' | 'hourlyShade';
+
+interface LayerState {
+    id: LayerType;
+    url?: string;
+    label: string;
+    active: boolean;
+    disabled: boolean;
+    overlay: google.maps.OverlayView | null;
+}
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 let googleMapsScriptLoadingPromise: Promise<void> | null = null;
-const mapOverlays: Map<string, any> = new Map(); // Using a map to manage overlays
 
 const loadGoogleMapsScript = () => {
   if (googleMapsScriptLoadingPromise) {
@@ -117,20 +124,32 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
   const [isApiLoaded, setIsApiLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Loading Map...');
-  const [activeLayers, setActiveLayers] = useState<ActiveLayers>({ annualFlux: true });
+  const [layers, setLayers] = useState<LayerState[]>([]);
 
   useEffect(() => {
     loadGoogleMapsScript()
       .then(() => setIsApiLoaded(true))
       .catch((err) => setError("Mapping service could not be loaded."));
   }, []);
+  
+  // Initialize layers once visualization data is available
+  useEffect(() => {
+    if (visualizationData) {
+      setLayers([
+        { id: 'annualFlux', url: visualizationData.annualFluxUrl, label: 'Annual Sun Exposure', active: true, disabled: !visualizationData.annualFluxUrl, overlay: null },
+        { id: 'buildingMask', url: visualizationData.maskUrl, label: 'Building Mask', active: false, disabled: !visualizationData.maskUrl, overlay: null },
+        { id: 'monthlyFlux', url: visualizationData.monthlyFluxUrl, label: 'Monthly Sun Exposure', active: false, disabled: !visualizationData.monthlyFluxUrl, overlay: null },
+        { id: 'hourlyShade', url: visualizationData.hourlyShadeUrls?.[0], label: 'Hourly Shade (Dec)', active: false, disabled: !visualizationData.hourlyShadeUrls || visualizationData.hourlyShadeUrls.length === 0, overlay: null },
+      ]);
+    }
+  }, [visualizationData]);
+
 
   useEffect(() => {
     if (isApiLoaded && mapRef.current && !map) {
       const mapInstance = new window.google.maps.Map(mapRef.current, {
         center: location,
         zoom: 20,
-        mapId: 'SATELLITE',
         mapTypeId: 'satellite',
         disableDefaultUI: true,
         zoomControl: true,
@@ -144,60 +163,65 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     }
   }, [isApiLoaded, location, map]);
 
-  const toggleLayer = useCallback(async (layer: Layer, url?: string) => {
-    if (!map || !visualizationData?.boundingBox) return;
+  const toggleLayer = useCallback(async (layerId: LayerType) => {
+    if (!map) return;
     
-    // Toggle the state
-    const isActivating = !activeLayers[layer];
-    setActiveLayers(prev => ({ ...prev, [layer]: isActivating }));
+    setLayers(prevLayers =>
+        prevLayers.map(layer =>
+            layer.id === layerId ? { ...layer, active: !layer.active } : layer
+        )
+    );
+  }, [map]);
 
-    if (isActivating) {
-      if (!url) {
-        setError(`No URL available for the ${layer} layer.`);
-        setActiveLayers(prev => ({ ...prev, [layer]: false }));
-        return;
-      }
-
-      setLoadingMessage(`Rendering ${layer} layer...`);
-      try {
-        if (mapOverlays.has(layer)) {
-            mapOverlays.get(layer).setMap(map);
-            return;
-        }
-        
-        const canvas = await renderGeoTiff(url, API_KEY!, layer);
-        if (!canvas) throw new Error('GeoTIFF rendering returned null.');
-
-        const { sw, ne } = visualizationData.boundingBox!;
-        const bounds = new google.maps.LatLngBounds(
-          new google.maps.LatLng(sw.lat, sw.lng),
-          new google.maps.LatLng(ne.lat, ne.lng)
-        );
-
-        const overlay = new CanvasOverlay(canvas, bounds);
-        overlay.setMap(map);
-        mapOverlays.set(layer, overlay);
-
-      } catch (err: any) {
-        setError(`Could not display ${layer} overlay: ${err.message}`);
-        setActiveLayers(prev => ({ ...prev, [layer]: false }));
-      } finally {
-        setLoadingMessage('');
-      }
-    } else {
-        if (mapOverlays.has(layer)) {
-            mapOverlays.get(layer).setMap(null);
-        }
-    }
-  }, [map, visualizationData, activeLayers]);
-
-  // Effect to automatically render the annual flux layer on load
+  // Effect to manage layer rendering based on state
   useEffect(() => {
-      if (map && visualizationData?.annualSolarFluxUrl && !mapOverlays.has('annualFlux')) {
-          toggleLayer('annualFlux', visualizationData.annualSolarFluxUrl);
+    if (!map || !visualizationData?.boundingBox) return;
+  
+    const { sw, ne } = visualizationData.boundingBox;
+    const bounds = new google.maps.LatLngBounds(
+      new google.maps.LatLng(sw.latitude, sw.longitude),
+      new google.maps.LatLng(ne.latitude, ne.longitude)
+    );
+  
+    layers.forEach(async (layer, index) => {
+      if (layer.active && !layer.overlay) {
+        // Activate layer
+        if (!layer.url) {
+          setError(`No URL available for the ${layer.label} layer.`);
+          return;
+        }
+  
+        setLoadingMessage(`Rendering ${layer.label}...`);
+        try {
+          const canvas = await renderGeoTiff(layer.url, API_KEY!, layer.id);
+          if (canvas) {
+            const overlay = new CanvasOverlay(canvas, bounds);
+            overlay.setMap(map);
+            setLayers(prev => {
+                const newLayers = [...prev];
+                newLayers[index].overlay = overlay;
+                return newLayers;
+            });
+          } else {
+             throw new Error('GeoTIFF rendering returned null.');
+          }
+        } catch (err: any) {
+          setError(`Could not display ${layer.label} overlay: ${err.message}`);
+          setLayers(prev => prev.map(l => l.id === layer.id ? {...l, active: false} : l)); // Deactivate on error
+        } finally {
+          setLoadingMessage('');
+        }
+      } else if (!layer.active && layer.overlay) {
+        // Deactivate layer
+        layer.overlay.setMap(null);
+        setLayers(prev => {
+            const newLayers = [...prev];
+            newLayers[index].overlay = null;
+            return newLayers;
+        });
       }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, visualizationData]);
+    });
+  }, [layers, map, visualizationData, API_KEY]);
   
   if (!API_KEY) {
     return (
@@ -229,34 +253,16 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
           <DropdownMenuContent className="w-56">
             <DropdownMenuLabel>Toggle Overlays</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={activeLayers.annualFlux}
-              onCheckedChange={() => toggleLayer('annualFlux', visualizationData?.annualSolarFluxUrl)}
-              disabled={!visualizationData?.annualSolarFluxUrl}
-            >
-              Annual Sun Exposure
-            </DropdownMenuCheckboxItem>
-             <DropdownMenuCheckboxItem
-              checked={activeLayers.buildingMask}
-              onCheckedChange={() => toggleLayer('buildingMask', visualizationData?.buildingMaskUrl)}
-              disabled={!visualizationData?.buildingMaskUrl}
-            >
-              Building Mask
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={activeLayers.monthlyFlux}
-              onCheckedChange={() => toggleLayer('monthlyFlux', visualizationData?.monthlySolarFluxUrls?.[0])}
-              disabled={!visualizationData?.monthlySolarFluxUrls || visualizationData.monthlySolarFluxUrls.length === 0}
-            >
-              Monthly Sun Exposure
-            </DropdownMenuCheckboxItem>
-             <DropdownMenuCheckboxItem
-              checked={activeLayers.hourlyShade}
-              onCheckedChange={() => toggleLayer('hourlyShade', visualizationData?.hourlyShadeUrls?.[0])}
-              disabled={!visualizationData?.hourlyShadeUrls || visualizationData.hourlyShadeUrls.length === 0}
-            >
-              Hourly Shade (Dec)
-            </DropdownMenuCheckboxItem>
+            {layers.map(layer => (
+                 <DropdownMenuCheckboxItem
+                    key={layer.id}
+                    checked={layer.active}
+                    onCheckedChange={() => toggleLayer(layer.id)}
+                    disabled={layer.disabled}
+                 >
+                    {layer.label}
+                 </DropdownMenuCheckboxItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

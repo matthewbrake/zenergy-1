@@ -9,56 +9,55 @@ interface CrmDataProps {
 }
 
 export default function CrmData({ result, addressData }: CrmDataProps) {
-  // This object includes every piece of data from the solar API responses.
+    const { potential, visualization } = result;
+
+  const defaultFinancials = potential.solarPotential.financialAnalyses.find(
+      (analysis) => analysis.monthlyBill?.units === 150
+  ) || potential.solarPotential.financialAnalyses[0];
+
   const crmDataObject = {
-    // Lead Identification
     "Lead.Status": "New",
     "Lead.Source": "Website Solar Funnel",
     "Lead.ServiceInterest": "Solar",
     
-    // Property Details
     "Property.Address": addressData.address,
     "Property.GooglePlaceID": addressData.placeId,
     "Property.Latitude": addressData.location.lat,
     "Property.Longitude": addressData.location.lng,
-    "Property.BoundingBox": result.potential.solarPotential?.boundingBox,
+    "Property.BoundingBox": potential.boundingBox,
     
-    // Solar Potential Assessment
-    "Solar.PanelCapacityWatts": result.potential.solarPotential?.panelCapacityWatts,
-    "Solar.PanelHeightMeters": result.potential.solarPotential?.panelHeightMeters,
-    "Solar.PanelWidthMeters": result.potential.solarPotential?.panelWidthMeters,
-    "Solar.PanelLifetimeYears": result.potential.solarPotential?.panelLifetimeYears,
-    "Solar.MaxArrayPanelsCount": result.potential.maxArrayPanelsCount,
-    "Solar.MaxArrayAreaMeters2": result.potential.solarPotential?.maxArrayAreaMeters2,
-    "Solar.MaxSunshineHoursPerYear": result.potential.maxSunshineHoursPerYear,
-    "Solar.CarbonOffsetFactorKgPerMwh": result.potential.carbonOffsetFactorKgPerMwh,
+    "Solar.PanelCapacityWatts": potential.solarPotential.panelCapacityWatts,
+    "Solar.PanelHeightMeters": potential.solarPotential.panelHeightMeters,
+    "Solar.PanelWidthMeters": potential.solarPotential.panelWidthMeters,
+    "Solar.PanelLifetimeYears": potential.solarPotential.panelLifetimeYears,
+    "Solar.MaxArrayPanelsCount": potential.solarPotential.maxArrayPanelsCount,
+    "Solar.MaxArrayAreaMeters2": potential.solarPotential.maxArrayAreaMeters2,
+    "Solar.MaxSunshineHoursPerYear": potential.solarPotential.maxSunshineHoursPerYear,
+    "Solar.CarbonOffsetFactorKgPerMwh": potential.solarPotential.carbonOffsetFactorKgPerMwh,
     
-    // Energy Production
-    "Solar.YearlyEnergyDcKwh": result.potential.yearlyEnergyDcKwh,
-    "Solar.RoofSegmentSummaries": result.potential.solarPotential?.roofSegmentStats,
-    "Solar.WholeRoofStats": result.potential.solarPotential?.wholeRoofStats,
-    "Solar.SolarPanelConfigs": result.potential.solarPotential?.solarPanelConfigs,
+    "Solar.YearlyEnergyDcKwh": potential.solarPotential.solarPanelConfigs.find(c => c.panelsCount === potential.solarPotential.maxArrayPanelsCount)?.yearlyEnergyDcKwh,
+    "Solar.RoofSegmentSummaries": potential.solarPotential.roofSegmentStats,
+    "Solar.WholeRoofStats": potential.solarPotential.wholeRoofStats,
+    "Solar.SolarPanelConfigs": potential.solarPotential.solarPanelConfigs,
 
-    // Financial Analysis (Cash Purchase)
-    "Financial.OutOfPocketCost": result.potential.financialAnalysis?.cashPurchaseSavings?.outOfPocketCost,
-    "Financial.UpfrontCost": result.potential.financialAnalysis?.cashPurchaseSavings?.upfrontCost,
-    "Financial.RebateValue": result.potential.financialAnalysis?.cashPurchaseSavings?.rebateValue,
-    "Financial.PaybackYears": result.potential.financialAnalysis?.cashPurchaseSavings?.paybackYears,
-    "Financial.SavingsYear1": result.potential.financialAnalysis?.cashPurchaseSavings?.savings?.savingsYear1,
-    "Financial.SavingsYear20": result.potential.financialAnalysis?.cashPurchaseSavings?.savings?.savingsYear20,
-    "Financial.SavingsLifetime": result.potential.financialAnalysis?.cashPurchaseSavings?.savings?.savingsLifetime,
+    "Financial.OutOfPocketCost": defaultFinancials?.cashPurchaseSavings?.outOfPocketCost,
+    "Financial.UpfrontCost": defaultFinancials?.cashPurchaseSavings?.upfrontCost,
+    "Financial.RebateValue": defaultFinancials?.cashPurchaseSavings?.rebateValue,
+    "Financial.PaybackYears": defaultFinancials?.cashPurchaseSavings?.paybackYears,
+    "Financial.SavingsYear1": defaultFinancials?.cashPurchaseSavings?.savings?.savingsYear1,
+    "Financial.SavingsYear20": defaultFinancials?.cashPurchaseSavings?.savings?.savingsYear20,
+    "Financial.SavingsLifetime": defaultFinancials?.cashPurchaseSavings?.savings?.savingsLifetime,
     
-    // API & Imagery Metadata
-    "API.ImageryDate": result.potential.imageryDate,
-    "API.ImageryProcessedDate": result.potential.imageryProcessedDate,
-    "API.ImageryQuality": result.potential.imageryQuality,
+    "API.ImageryDate": potential.imageryDate,
+    "API.ImageryProcessedDate": potential.imageryProcessedDate,
+    "API.ImageryQuality": potential.imageryQuality,
     
-    // Visualization Data (URLs)
-    "Visualization.RgbImageryUrl": result.visualization.rgbImageryUrl,
-    "Visualization.AnnualFluxUrl": result.visualization.annualSolarFluxUrl,
-    "Visualization.MonthlyFluxUrls": result.visualization.monthlySolarFluxUrls,
-    "Visualization.HourlyShadeUrls": result.visualization.hourlyShadeUrls,
-    "Visualization.DsmUrl": result.visualization.digitalSurfaceModelUrl,
+    "Visualization.RgbImageryUrl": visualization.rgbUrl,
+    "Visualization.AnnualFluxUrl": visualization.annualFluxUrl,
+    "Visualization.MonthlyFluxUrl": visualization.monthlyFluxUrl,
+    "Visualization.HourlyShadeUrls": visualization.hourlyShadeUrls,
+    "Visualization.DsmUrl": visualization.dsmUrl,
+    "Visualization.MaskUrl": visualization.maskUrl,
   };
 
   return (

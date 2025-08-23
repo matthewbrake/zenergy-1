@@ -1,11 +1,12 @@
 
 'use server';
 
-import type { AnalysisResult, SolarPotentialAssessmentOutput, VisualizeSolarDataLayersOutput, BuildingInsights, FinancialAnalysis } from '@/lib/types';
+import type { BuildingInsightsResponse, DataLayersResponse, AnalysisResult } from '@/lib/types';
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const SOLAR_API_BASE_URL = 'https://solar.googleapis.com';
 
+// Generic fetch function for the Solar API
 async function fetchSolarApi(endpoint: string, params: URLSearchParams): Promise<any> {
   if (!API_KEY) {
     const errorMsg = 'Google Maps API key is missing. This is a configuration issue. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.';
@@ -27,30 +28,66 @@ async function fetchSolarApi(endpoint: string, params: URLSearchParams): Promise
 
   if (!response.ok) {
     const errorBody = await response.text();
-    console.error(`[SERVER ACTION] Solar API request for endpoint "${endpoint}" failed with status ${response.status}: ${errorBody}`);
-    
-    let errorMessage = `Solar API request failed with status: ${response.status}.`;
-    
-    if (response.status === 404) {
-      errorMessage = "We're sorry, but solar data is not available for this address. This may be because it's outside the coverage area or not recognized as a building.";
-    } else {
-        try {
-          const errorJson = JSON.parse(errorBody);
-           if (errorJson.error && errorJson.error.message) {
-              errorMessage += ` Details: ${errorJson.error.message}`;
-           } else {
-             errorMessage += ` Raw Response: ${errorBody}`;
-           }
-        } catch (e) {
-          errorMessage += ` Raw Response: ${errorBody}`;
-        }
+    let errorJson;
+    try {
+        errorJson = JSON.parse(errorBody);
+    } catch (e) {
+        // Not a JSON response
     }
-    throw new Error(errorMessage);
+
+    const defaultErrorMessage = `Solar API request for endpoint "${endpoint}" failed with status ${response.status}.`;
+    
+    if (errorJson && errorJson.error) {
+      if (errorJson.error.message.includes('not found in our database')) {
+        throw new Error("We're sorry, but solar data is not available for this address. This may be because it's outside the coverage area or not recognized as a building.");
+      }
+      throw new Error(`${defaultErrorMessage} Details: ${errorJson.error.message}`);
+    }
+
+    throw new Error(`${defaultErrorMessage} Raw Response: ${errorBody}`);
   }
 
   return response.json();
 }
 
+/**
+ * Fetches Building Insights from the Solar API.
+ * @param location The latitude and longitude.
+ * @returns A promise that resolves with the building insights.
+ */
+async function findClosestBuilding(location: { lat: number; lng: number }): Promise<BuildingInsightsResponse> {
+  const params = new URLSearchParams({
+    'location.latitude': location.lat.toString(),
+    'location.longitude': location.lng.toString(),
+    'required_quality': 'HIGH',
+  });
+  return fetchSolarApi('buildingInsights:findClosest', params);
+}
+
+/**
+ * Fetches Data Layers from the Solar API.
+ * @param location The latitude and longitude.
+ * @param radiusMeters The radius to fetch data for.
+ * @returns A promise that resolves with the data layers.
+ */
+async function getDataLayers(location: { lat: number; lng: number }, radiusMeters: number = 50): Promise<DataLayersResponse> {
+  const params = new URLSearchParams({
+    'location.latitude': location.lat.toString(),
+    'location.longitude': location.lng.toString(),
+    'radius_meters': radiusMeters.toString(),
+    'view': 'FULL_LAYERS',
+    'required_quality': 'HIGH',
+    'pixel_size_meters': '0.5',
+  });
+  return fetchSolarApi('dataLayers:get', params);
+}
+
+/**
+ * Main server action to get the complete solar analysis for a given location.
+ * It fetches building insights and data layers in parallel.
+ * @param location The latitude and longitude.
+ * @returns An object indicating success or failure, with data or an error message.
+ */
 export async function getSolarAnalysis(location: { lat: number; lng: number }): Promise<{ success: boolean; data?: AnalysisResult; error?: string; }> {
   console.log(`[SERVER ACTION] getSolarAnalysis called with location:`, location);
   
@@ -61,30 +98,15 @@ export async function getSolarAnalysis(location: { lat: number; lng: number }): 
   }
 
   try {
-    const buildingInsightsParams = new URLSearchParams({
-      'location.latitude': location.lat.toString(),
-      'location.longitude': location.lng.toString(),
-      'requiredQuality': 'HIGH'
-    });
-
-    const dataLayersParams = new URLSearchParams({
-      'location.latitude': location.lat.toString(),
-      'location.longitude': location.lng.toString(),
-      'radius_meters': '50',
-      'view': 'FULL_LAYERS',
-      'requiredQuality': 'HIGH',
-      'pixel_size_meters': '0.5',
-    });
-
     console.log('[SERVER ACTION] Running Solar API calls in parallel...');
     
-    // Using Promise.allSettled to ensure both requests complete, even if one fails.
+    // Use Promise.allSettled to ensure both requests complete, even if one fails.
     const [potentialResult, visualizationResult] = await Promise.allSettled([
-        fetchSolarApi('buildingInsights:findClosest', buildingInsightsParams),
-        fetchSolarApi('dataLayers:get', dataLayersParams),
+        findClosestBuilding(location),
+        getDataLayers(location),
     ]);
 
-    // Check for rejected promises and aggregate errors
+    // Aggregate errors from rejected promises
     const errors: any[] = [];
     if (potentialResult.status === 'rejected') {
         errors.push({ api: 'Building Insights', reason: potentialResult.reason?.message || 'Unknown error' });
@@ -95,51 +117,27 @@ export async function getSolarAnalysis(location: { lat: number; lng: number }): 
     
     if (errors.length > 0) {
       const errorMessage = `One or more critical Solar API calls failed. Details: ${errors.map(e => `${e.api}: ${e.reason}`).join('; ')}`;
-      console.error(`[SERVER ACTION] Detailed error summary:`, JSON.stringify(errors, null, 2));
-      // Throwing here will propagate a detailed error message to the client.
       throw new Error(errorMessage);
     }
     
-    // By this point, we know both promises were fulfilled
-    const buildingInsights = (potentialResult as PromiseFulfilledResult<BuildingInsights>).value;
-    const dataLayers = (visualizationResult as PromiseFulfilledResult<any>).value;
+    const buildingInsights = (potentialResult as PromiseFulfilledResult<BuildingInsightsResponse>).value;
+    const dataLayers = (visualizationResult as PromiseFulfilledResult<DataLayersResponse>).value;
 
-    if (!buildingInsights || !buildingInsights.solarPotential) {
-        throw new Error('Building insights not found for this location. It may be outside the coverage area, or no building was detected within 50m of the specified coordinates.');
+    if (!buildingInsights?.solarPotential) {
+        throw new Error('Building insights not found. The address may be outside the coverage area or not recognized as a building.');
     }
-     if (!dataLayers || !dataLayers.imageryUrl) {
-        throw new Error('Data layers could not be retrieved for this location. This can happen if the location is outside of the high-resolution imagery coverage area.');
+    if (!dataLayers?.rgbUrl) {
+        throw new Error('Data layers (imagery) could not be retrieved for this location.');
     }
 
     console.log('[SERVER ACTION] Both API calls completed successfully.');
     
-    const potential: SolarPotentialAssessmentOutput = {
-      solarPotential: buildingInsights.solarPotential,
-      maxArrayPanelsCount: buildingInsights.solarPotential.maxArrayPanelsCount,
-      maxSunshineHoursPerYear: buildingInsights.solarPotential.maxSunshineHoursPerYear,
-      carbonOffsetFactorKgPerMwh: buildingInsights.solarPotential.carbonOffsetFactorKgPerMwh,
-      yearlyEnergyDcKwh: buildingInsights.solarPotential.yearlyEnergyDcKwh,
-      financialAnalysis: buildingInsights.solarPotential.financialAnalyses?.find((a: FinancialAnalysis) => a.defaultBill === true),
-      imageryDate: buildingInsights.imageryDate,
-      imageryProcessedDate: buildingInsights.imageryProcessedDate,
-      imageryQuality: buildingInsights.imageryQuality,
-      panelLifetimeYears: buildingInsights.solarPotential.panelLifetimeYears,
-    };
-    
-    const visualization: VisualizeSolarDataLayersOutput = {
-      rgbImageryUrl: dataLayers.imageryUrl,
-      digitalSurfaceModelUrl: dataLayers.dsmUrl,
-      annualSolarFluxUrl: dataLayers.fluxUrl,
-      monthlySolarFluxUrls: dataLayers.monthlyFlux ? [dataLayers.monthlyFlux] : [],
-      hourlyShadeUrls: dataLayers.hourlyShadeUrls || [],
-      buildingMaskUrl: dataLayers.maskUrl,
-      boundingBox: buildingInsights.boundingBox ? {
-        sw: { lat: buildingInsights.boundingBox.sw.latitude, lng: buildingInsights.boundingBox.sw.longitude },
-        ne: { lat: buildingInsights.boundingBox.ne.latitude, lng: buildingInsights.boundingBox.ne.longitude },
-      } : undefined,
+    const result: AnalysisResult = {
+        potential: buildingInsights,
+        visualization: dataLayers,
     };
 
-    return { success: true, data: { potential, visualization } as AnalysisResult };
+    return { success: true, data: result };
 
   } catch (error: unknown) {
     const finalErrorMessage = error instanceof Error ? error.message : 'An unknown error occurred during the server-side analysis.';

@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 // List of US States for dropdown
@@ -85,108 +84,151 @@ export interface AppointmentData {
   time: string; // e.g., "10:00 AM"
 }
 
-// --- SOLAR API TYPES ---
-// These types are structured to match the JSON responses from the Google Solar API.
+// --- SOLAR API TYPES (Aligned with user-provided reference) ---
 
-export type Money = {
+export interface LatLng {
+  latitude: number;
+  longitude: number;
+}
+
+export interface Date {
+  year: number;
+  month: number;
+  day: number;
+}
+
+export interface LatLngBox {
+  sw: LatLng;
+  ne: LatLng;
+}
+
+export interface DataLayersResponse {
+  imageryDate: Date;
+  imageryProcessedDate: Date;
+  dsmUrl: string;
+  rgbUrl: string;
+  maskUrl: string;
+  annualFluxUrl: string;
+  monthlyFluxUrl: string;
+  hourlyShadeUrls: string[];
+  imageryQuality: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+export interface SizeAndSunshineStats {
+  areaMeters2: number;
+  sunshineQuantiles: number[];
+  groundAreaMeters2: number;
+}
+
+export interface RoofSegmentSizeAndSunshineStats {
+  pitchDegrees: number;
+  azimuthDegrees: number;
+  stats: SizeAndSunshineStats;
+  center: LatLng;
+  boundingBox: LatLngBox;
+  planeHeightAtCenterMeters: number;
+}
+
+export interface SolarPanel {
+  center: LatLng;
+  orientation: 'LANDSCAPE' | 'PORTRAIT';
+  segmentIndex: number;
+  yearlyEnergyDcKwh: number;
+}
+
+export interface RoofSegmentSummary {
+  pitchDegrees: number;
+  azimuthDegrees: number;
+  panelsCount: number;
+  yearlyEnergyDcKwh: number;
+  segmentIndex: number;
+}
+
+export interface SolarPanelConfig {
+  panelsCount: number;
+  yearlyEnergyDcKwh: number;
+  roofSegmentSummaries: RoofSegmentSummary[];
+}
+
+export interface Money {
   currencyCode?: string;
   units?: number;
   nanos?: number;
-};
+}
 
-export type SavingsOverTime = {
+export interface SavingsOverTime {
   savingsYear1?: Money;
   savingsYear20?: Money;
   presentValueOfSavingsYear20?: Money;
   savingsLifetime?: Money;
   presentValueOfSavingsLifetime?: Money;
   financiallyViable?: boolean;
-};
+}
 
-export type CashPurchaseSavings = {
+export interface CashPurchaseSavings {
   outOfPocketCost?: Money;
   upfrontCost?: Money;
   rebateValue?: Money;
   savings?: SavingsOverTime;
   paybackYears?: number;
-};
+}
 
-export type FinancialAnalysis = {
+export interface FinancialAnalysis {
   monthlyBill?: Money;
   defaultBill?: boolean;
   averageKwhPerMonth?: number;
   cashPurchaseSavings?: CashPurchaseSavings;
   // Other financing options can be added here if needed
-};
-
-// This type maps to the full buildingInsights response, containing the solarPotential object.
-export type BuildingInsights = {
-    name: string;
-    center: { latitude: number; longitude: number; };
-    boundingBox: { sw: { latitude: number, longitude: number }, ne: { latitude: number, longitude: number }};
-    imageryDate: { year: number; month: number; day: number; };
-    imageryProcessedDate: { year: number; month: number; day: number; };
-    imageryQuality: 'HIGH' | 'MEDIUM' | 'LOW';
-    solarPotential: {
-        maxArrayPanelsCount: number;
-        maxArrayAreaMeters2: number;
-        maxSunshineHoursPerYear: number;
-        carbonOffsetFactorKgPerMwh: number;
-        wholeRoofStats: any; // Could be typed further
-        roofSegmentStats: any[]; // Could be typed further
-        solarPanelConfigs: any[]; // Could be typed further
-        panelCapacityWatts: number;
-        panelHeightMeters: number;
-        panelWidthMeters: number;
-        panelLifetimeYears: number;
-        yearlyEnergyDcKwh: number;
-        financialAnalyses: any[]; // Contains FinancialAnalysis objects
-    }
 }
 
-// Maps to the Solar API's SolarPotential sub-object and includes the top-level financialAnalysis
-export type SolarPotentialAssessmentOutput = {
-  maxArrayPanelsCount?: number;
-  maxSunshineHoursPerYear?: number;
-  carbonOffsetFactorKgPerMwh?: number;
-  yearlyEnergyDcKwh?: number;
-  financialAnalysis?: FinancialAnalysis; 
-  solarPotential?: BuildingInsights['solarPotential']; // The full, detailed solar potential object
-  imageryDate?: any;
-  imageryProcessedDate?: any;
-  imageryQuality?: string;
-  panelLifetimeYears?: number;
-};
+export interface SolarPotential {
+  maxArrayPanelsCount: number;
+  panelCapacityWatts: number;
+  panelHeightMeters: number;
+  panelWidthMeters: number;
+  panelLifetimeYears: number;
+  maxArrayAreaMeters2: number;
+  maxSunshineHoursPerYear: number;
+  carbonOffsetFactorKgPerMwh: number;
+  wholeRoofStats: SizeAndSunshineStats;
+  buildingStats: SizeAndSunshineStats;
+  roofSegmentStats: RoofSegmentSizeAndSunshineStats[];
+  solarPanels: SolarPanel[];
+  solarPanelConfigs: SolarPanelConfig[];
+  financialAnalyses: FinancialAnalysis[];
+}
 
-// Maps to the Solar API's `dataLayers` endpoint response
-export type VisualizeSolarDataLayersOutput = {
-  rgbImageryUrl?: string;
-  digitalSurfaceModelUrl?: string;
-  annualSolarFluxUrl?: string;
-  monthlySolarFluxUrls?: string[];
-  hourlyShadeUrls?: string[];
-  buildingMaskUrl?: string;
-  boundingBox?: {
-    sw: { lat: number; lng: number };
-    ne: { lat: number; lng: number };
-  };
-};
+export interface BuildingInsightsResponse {
+  name: string;
+  center: LatLng;
+  boundingBox: LatLngBox;
+  imageryDate: Date;
+  imageryProcessedDate: Date;
+  postalCode: string;
+  administrativeArea: string;
+  statisticalArea: string;
+  regionCode: string;
+  solarPotential: SolarPotential;
+  imageryQuality: 'HIGH' | 'MEDIUM' | 'LOW';
+}
 
-// The combined result passed to the solar report page
+// Custom type for combined data used in the app
 export type AnalysisResult = {
-  potential: SolarPotentialAssessmentOutput & { solarPotential: BuildingInsights['solarPotential'] }; // Ensure solarPotential is not optional here
-  visualization: VisualizeSolarDataLayersOutput;
+  potential: BuildingInsightsResponse;
+  visualization: DataLayersResponse;
 };
 
-// Helper type for GeoTIFF rendering
-export interface GeoTiffData {
+// Helper types for GeoTIFF rendering
+export interface Bounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+export interface GeoTiff {
   width: number;
   height: number;
   rasters: Array<number>[];
-  bounds: {
-    left: number;
-    bottom: number;
-    right: number;
-    top: number;
-  };
+  bounds: Bounds;
 }

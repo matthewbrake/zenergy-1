@@ -2,13 +2,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { type AnalysisResult, type AddressData } from '@/lib/types';
+import { type AnalysisResult, type AddressData, FinancialAnalysis } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import MetricCard from './metric-card';
 import MapView from './map-view';
 import CrmData from './crm-data';
 import FinancialSummary from './financial-summary';
-import { Sun, Zap, Target, RefreshCw, Leaf, ArrowRight, ChevronsUpDown } from 'lucide-react';
+import { Sun, Zap, Target, RefreshCw, Leaf, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { appConfig } from '@/lib/config';
@@ -23,18 +23,17 @@ interface AnalysisDisplayProps {
 export default function AnalysisDisplay({ result, addressData, onReset }: AnalysisDisplayProps) {
   const router = useRouter();
   const { potential } = result;
-  
-  // Calculate a more robust viability score
-  const viabilityScore = potential.solarPotential?.maxArrayPanelsCount && potential.solarPotential.maxSunshineHoursPerYear
-    ? Math.round(
-        ((potential.solarPotential.maxSunshineHoursPerYear / 2000) * 0.7 + // Weight sunshine hours
-         (potential.solarPotential.maxArrayPanelsCount / 50) * 0.3) // Weight panel count
-        * 100
-      )
-    : 75; // Default score
 
-  const twentyYearSavings = potential.financialAnalysis?.cashPurchaseSavings?.savings?.savingsYear20?.units || 0;
-  const carbonOffset = potential.carbonOffsetFactorKgPerMwh || 0;
+  const viabilityScore = potential.solarPotential?.maxSunshineHoursPerYear
+    ? Math.round((potential.solarPotential.maxSunshineHoursPerYear / 2000) * 100)
+    : 75;
+
+  const defaultFinancials = potential.solarPotential.financialAnalyses.find(
+      (analysis: FinancialAnalysis) => analysis.monthlyBill?.units === 150
+  ) || potential.solarPotential.financialAnalyses[0];
+  
+  const twentyYearSavings = defaultFinancials?.cashPurchaseSavings?.savings?.savingsYear20?.units || 0;
+  const carbonOffset = potential.solarPotential.carbonOffsetFactorKgPerMwh || 0;
 
   return (
     <div className="w-full space-y-8">
@@ -47,7 +46,10 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
         <div className="lg:col-span-2">
            <Card className="h-full shadow-lg">
              <CardContent className="p-0 h-[500px] relative">
-              <MapView location={addressData.location} visualizationData={result.visualization} />
+              <MapView 
+                location={{lat: result.potential.center.latitude, lng: result.potential.center.longitude}} 
+                visualizationData={result.visualization}
+              />
              </CardContent>
            </Card>
         </div>
@@ -61,7 +63,7 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
           <MetricCard
             icon={Zap}
             label={appConfig.solarReport.metrics.panelCount.label}
-            value={potential.maxArrayPanelsCount || 'N/A'}
+            value={potential.solarPotential.maxArrayPanelsCount || 'N/A'}
             description={appConfig.solarReport.metrics.panelCount.description}
           />
           <MetricCard
@@ -91,8 +93,11 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
                   <span>{appConfig.solarReport.details.financials.title}</span>
                </AccordionTrigger>
               <AccordionContent>
-                {potential.financialAnalysis ? (
-                   <FinancialSummary financialAnalysis={potential.financialAnalysis} solarPotential={potential} />
+                {potential.solarPotential.financialAnalyses?.length > 0 ? (
+                   <FinancialSummary 
+                     financialAnalysis={defaultFinancials} 
+                     solarPotential={potential.solarPotential} 
+                   />
                 ) : (
                   <p className="text-muted-foreground">{appConfig.solarReport.details.financials.noData}</p>
                 )}

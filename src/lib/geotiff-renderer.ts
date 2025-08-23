@@ -1,8 +1,8 @@
+import { fromUrl } from 'geotiff';
+import { toProj4 } from '@geotiff/proj4';
+import proj4 from 'proj4';
 
 
-import { fromUrl, fromArrayBuffer } from 'geotiff';
-
-// Palettes for different data layers
 const PALETTES = {
   annualFlux: [
     '#000000', '#030206', '#06040C', '#0A0612', '#0D0818', '#100A1F', '#140C25',
@@ -36,9 +36,9 @@ const PALETTES = {
     '#FFFFD8', '#FFFFDD', '#FFFFE1', '#FFFFE6', '#FFFFEA', '#FFFFEF', '#FFFFF3',
     '#FFFFF8', '#FFFFFF',
   ],
-  monthlyFlux: ['#000000', '#FFBF42', '#FFFFFF'], // Simplified for monthly
-  hourlyShade: ['#000000', '#90FB00', '#FFFFFF'], // Simplified for hourly
-  buildingMask: ['#FF00FF'], // Magenta for building mask
+  monthlyFlux: ['#000000', '#FFBF42', '#FFFFFF'],
+  hourlyShade: ['#000000', '#90FB00', '#FFFFFF'],
+  buildingMask: ['#FF00FF'],
 };
 
 const RENDER_CONFIG = {
@@ -48,15 +48,11 @@ const RENDER_CONFIG = {
     buildingMask: { palette: PALETTES.buildingMask, min: 0, max: 1 },
 };
 
-type LayerType = keyof typeof RENDER_CONFIG;
+export type LayerType = keyof typeof RENDER_CONFIG;
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : { r: 0, g: 0, b: 0 };
-}
-
-function createRgbPalette(hexPalette: string[]): { r: number; g: number; b: number }[] {
-    return hexPalette.map(hexToRgb);
 }
 
 function normalize(value: number, min: number, max: number): number {
@@ -69,77 +65,52 @@ export async function renderGeoTiff(
     url: string,
     apiKey: string,
     layerType: LayerType
-): Promise<HTMLCanvasElement> {
-    
-    let tiff;
+): Promise<HTMLCanvasElement | null> {
     try {
         const fullUrl = `${url}&key=${apiKey}`;
-        const response = await fetch(fullUrl);
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to fetch GeoTIFF: ${response.status} ${response.statusText}. Details: ${errorText}`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        tiff = await fromArrayBuffer(arrayBuffer);
-    } catch (e) {
-        console.error('[GeoTiffRenderer] ERROR: Failed to fetch or load GeoTIFF:', e);
-        throw new Error('Could not download or parse GeoTIFF data from the provided URL.');
-    }
-
-    let image;
-    try {
-        image = await tiff.getImage();
-    } catch(e) {
-        console.error('[GeoTiffRenderer] ERROR: Failed to get image from TIFF:', e);
-        throw new Error('Could not parse image data from the GeoTIFF file.');
-    }
-    
-    let rasterData;
-    try {
-        rasterData = await image.readRasters();
-        if (!rasterData || !rasterData[0]) {
-            throw new Error('Raster data is empty or invalid.');
-        }
-    } catch (e) {
-        console.error('[GeoTiffRenderer] ERROR: Failed to read raster data:', e);
-        throw new Error('Could not read raster data from the GeoTIFF image.');
-    }
-    
-    const canvas = document.createElement('canvas');
-    canvas.width = image.getWidth();
-    canvas.height = image.getHeight();
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-        throw new Error('Failed to create canvas context for rendering.');
-    }
-    
-    const imageData = ctx.createImageData(canvas.width, canvas.height);
-    
-    const config = RENDER_CONFIG[layerType];
-    const palette = createRgbPalette(config.palette);
-    const { min, max } = config;
-
-    const data = rasterData[0] as number[];
-
-    for (let i = 0; i < data.length; i++) {
-        // Skip pixels with no data (often -9999)
-        if (data[i] < min) {
-            imageData.data[i * 4 + 3] = 0; // Transparent
-            continue;
-        }
-
-        const normalized = normalize(data[i], min, max);
-        const colorIndex = Math.floor(normalized * (palette.length - 1));
-        const color = palette[colorIndex];
+        const tiff = await fromUrl(fullUrl);
+        const image = await tiff.getImage();
+        const rasters = await image.readRasters();
+        const data = rasters[0];
         
-        imageData.data[i * 4] = color.r;
-        imageData.data[i * 4 + 1] = color.g;
-        imageData.data[i * 4 + 2] = color.b;
-        imageData.data[i * 4 + 3] = layerType === 'buildingMask' ? 128 : 200; // 50% opacity for mask, ~78% for others
+        const canvas = document.createElement('canvas');
+        canvas.width = image.getWidth();
+        canvas.height = image.getHeight();
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            throw new Error('Failed to create canvas context for rendering.');
+        }
+    
+        const imageData = ctx.createImageData(canvas.width, canvas.height);
+        
+        const config = RENDER_CONFIG[layerType];
+        const palette = config.palette.map(hexToRgb);
+        const { min, max } = config;
+    
+        for (let i = 0; i < data.length; i++) {
+            const val = Array.isArray(data) ? data[i] : (data as any)[i];
+
+            // No-data values are typically large negative numbers
+            if (val < min) {
+                imageData.data[i * 4 + 3] = 0; // Transparent
+                continue;
+            }
+    
+            const normalized = normalize(val, min, max);
+            const colorIndex = Math.floor(normalized * (palette.length - 1));
+            const color = palette[colorIndex];
+            
+            imageData.data[i * 4] = color.r;
+            imageData.data[i * 4 + 1] = color.g;
+            imageData.data[i * 4 + 2] = color.b;
+            // Use different opacity for the building mask vs other layers
+            imageData.data[i * 4 + 3] = layerType === 'buildingMask' ? 128 : 200; 
+        }
+    
+        ctx.putImageData(imageData, 0, 0);
+        return canvas;
+    } catch (error) {
+        console.error(`[GeoTiffRenderer] Failed to render GeoTIFF for layer ${layerType}:`, error);
+        return null;
     }
-
-    ctx.putImageData(imageData, 0, 0);
-
-    return canvas;
 }

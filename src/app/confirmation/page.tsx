@@ -47,8 +47,8 @@ export default function ConfirmationPage() {
                 <h3 className="font-semibold text-lg">{serviceChoice} Service Details</h3>
             </div>
             <p><strong>Needs:</strong> {otherServicesData.description}</p>
-            <p><strong>Credit Score:</strong> {appConfig.otherServices.creditScoreOptions.find(o => o.value === otherServicesData.creditScore)?.label}</p>
-            <p><strong>Interest Level:</strong> {appConfig.otherServices.interestLevelOptions.find(o => o.value === otherServicesData.interestLevel)?.label}</p>
+            <p><strong>Credit Score:</strong> {appConfig.financialDetails.creditScoreOptions.find(o => o.value === otherServicesData.creditScore)?.label}</p>
+            <p><strong>Interest Level:</strong> {appConfig.financialDetails.interestLevelOptions.find(o => o.value === otherServicesData.interestLevel)?.label}</p>
         </>
       )
     }
