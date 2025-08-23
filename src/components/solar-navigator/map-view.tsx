@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import type { DataLayersResponse } from '@/lib/types';
-import { renderGeoTiff } from '@/lib/geotiff-renderer';
+import { renderGeoTiffToCanvas } from '@/lib/geotiff-renderer';
 
 interface MapViewProps {
   location: { lat: number; lng: number };
@@ -158,16 +158,20 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
         tilt: 0,
       });
       
-      const marker = new window.google.maps.marker.AdvancedMarkerElement({
+      new window.google.maps.marker.AdvancedMarkerElement({
         position: location,
         map: mapInstance,
       });
 
       // It's crucial to wait for the map to be idle before we declare it "ready"
-      google.maps.event.addListenerOnce(mapInstance, 'idle', () => {
+      const idleListener = google.maps.event.addListenerOnce(mapInstance, 'idle', () => {
           setMap(mapInstance);
           setLoadingMessage('');
       });
+
+      return () => {
+        google.maps.event.removeListener(idleListener);
+      };
     }
   }, [isApiLoaded, location, map]);
 
@@ -192,29 +196,38 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     layers.forEach(async (layer, index) => {
       // If layer should be active but has no overlay, create it.
       if (layer.active && !layer.overlay) {
-        if (!layer.url) {
-          console.warn(`No URL for layer: ${layer.label}`);
+        if (!layer.url || !API_KEY) {
+          console.warn(`No URL or API Key for layer: ${layer.label}`);
           return;
         }
   
         setLoadingMessage(`Rendering ${layer.label}...`);
         try {
-          const canvas = await renderGeoTiff(layer.url, API_KEY!, layer.id);
+          const canvas = await renderGeoTiffToCanvas(layer.url, API_KEY, layer.id);
           if (canvas && map) { // Check if map is still mounted
             const newOverlay = new CanvasOverlay(canvas, bounds);
-            newOverlay.setMap(map);
-            // Update the state with the created overlay
+            
+            // This is a critical state update. We need to be careful with async operations.
             setLayers(currentLayers => {
               const newLayers = [...currentLayers];
-              newLayers[index].overlay = newOverlay;
+              const currentLayerState = newLayers[index];
+              // Only update if the layer is still supposed to be active
+              if(currentLayerState && currentLayerState.active) {
+                currentLayerState.overlay = newOverlay;
+                // Set the map on the overlay *after* it's in state
+                newOverlay.setMap(map);
+              }
               return newLayers;
             });
+
           } else {
              throw new Error('GeoTIFF rendering returned null or map was unmounted.');
           }
         } catch (err: any) {
-          setError(`Could not display ${layer.label} overlay: ${err.message}`);
-          toggleLayer(layer.id); // Deactivate layer on error
+          console.error(`Overlay error for ${layer.label}:`, err);
+          setError(`Could not display ${layer.label} overlay.`);
+          // Deactivate layer on error to prevent retry loops
+          setLayers(currentLayers => currentLayers.map(l => l.id === layer.id ? {...l, active: false, overlay: null} : l));
         } finally {
           setLoadingMessage('');
         }
@@ -225,12 +238,16 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
         // Update the state to remove the overlay
         setLayers(currentLayers => {
             const newLayers = [...currentLayers];
-            newLayers[index].overlay = null;
+            const layerToUpdate = newLayers[index];
+            if(layerToUpdate) {
+                layerToUpdate.overlay = null;
+            }
             return newLayers;
         });
       }
     });
-  }, [layers, map, visualizationData, API_KEY, toggleLayer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers, map, visualizationData]);
   
   if (!API_KEY) {
     return (

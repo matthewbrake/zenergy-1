@@ -48,6 +48,7 @@ export default function ConfirmationPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json'
           },
           body: JSON.stringify(finalSubmissionData, null, 2),
         });

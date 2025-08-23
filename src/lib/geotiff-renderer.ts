@@ -1,9 +1,27 @@
+
+/**
+ * @fileoverview
+ * This file contains utility functions for rendering GeoTIFF data from the Google Solar API
+ * onto an HTML canvas. It's based on the official Google Maps Platform Solar API samples.
+ *
+ * It includes functions to:
+ * - Render multi-band (RGB) GeoTIFFs.
+ * - Render single-band GeoTIFFs using a color palette (for heatmaps like solar flux).
+ * - Create color palettes and perform the necessary calculations (normalization, interpolation).
+ */
+
 import { fromUrl } from 'geotiff';
-import { toProj4 } from '@geotiff/proj4';
-import proj4 from 'proj4';
 
+// Type definition for a GeoTIFF object, simplified for our use case.
+export interface GeoTiff {
+  width: number;
+  height: number;
+  rasters: Array<number[]>;
+}
 
+// Color palettes for different data layers
 const PALETTES = {
+  // A detailed palette for annual solar radiation, from low (dark blue) to high (bright yellow/white)
   annualFlux: [
     '#000000', '#030206', '#06040C', '#0A0612', '#0D0818', '#100A1F', '#140C25',
     '#170E2B', '#1A1032', '#1E1238', '#21143E', '#241644', '#28184B', '#2B1A51',
@@ -36,81 +54,151 @@ const PALETTES = {
     '#FFFFD8', '#FFFFDD', '#FFFFE1', '#FFFFE6', '#FFFFEA', '#FFFFEF', '#FFFFF3',
     '#FFFFF8', '#FFFFFF',
   ],
+  // Simple palettes for other layers
   monthlyFlux: ['#000000', '#FFBF42', '#FFFFFF'],
   hourlyShade: ['#000000', '#90FB00', '#FFFFFF'],
-  buildingMask: ['#FF00FF'],
+  buildingMask: ['#FF00FF'], // A single color for the building mask
 };
 
+// Configuration for rendering each layer type
 const RENDER_CONFIG = {
-    annualFlux: { palette: PALETTES.annualFlux, min: 0, max: 1800 },
-    monthlyFlux: { palette: PALETTES.monthlyFlux, min: 0, max: 200 },
-    hourlyShade: { palette: PALETTES.hourlyShade, min: 0, max: 255 },
-    buildingMask: { palette: PALETTES.buildingMask, min: 0, max: 1 },
+    annualFlux: { palette: PALETTES.annualFlux, min: 0, max: 1800, opacity: 200 },
+    monthlyFlux: { palette: PALETTES.monthlyFlux, min: 0, max: 200, opacity: 200 },
+    hourlyShade: { palette: PALETTES.hourlyShade, min: 0, max: 255, opacity: 200 },
+    buildingMask: { palette: PALETTES.buildingMask, min: 0, max: 1, opacity: 128 },
 };
 
 export type LayerType = keyof typeof RENDER_CONFIG;
+
+// --- Core GeoTIFF Fetching and Rendering ---
+
+/**
+ * Downloads a GeoTIFF from a URL and extracts its raster data.
+ * @param url The URL of the GeoTIFF file.
+ * @param apiKey Your Google Maps API key.
+ * @returns A promise that resolves to a GeoTiff object.
+ */
+async function downloadGeoTiff(url: string, apiKey: string): Promise<GeoTiff> {
+  const fullUrl = `${url}&key=${apiKey}`;
+  const tiff = await fromUrl(fullUrl);
+  const image = await tiff.getImage();
+  const rasters = await image.readRasters();
+  
+  // Convert TypedArrays to standard arrays for easier processing.
+  const rasterArrays = [...Array(rasters.length).keys()].map((i) =>
+    Array.from(rasters[i] as any)
+  );
+
+  return {
+    width: image.getWidth(),
+    height: image.getHeight(),
+    rasters: rasterArrays,
+  };
+}
+
+/**
+ * Renders a single-band GeoTIFF to a canvas using a color palette.
+ * @param data The GeoTiff object containing the data.
+ * @param config The rendering configuration for the specific layer type.
+ * @returns An HTMLCanvasElement with the rendered heatmap.
+ */
+function renderPalette(data: GeoTiff, config: typeof RENDER_CONFIG[LayerType]): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = data.width;
+  canvas.height = data.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Could not get canvas context.');
+
+  const imageData = ctx.createImageData(canvas.width, canvas.height);
+  const palette = createPalette(config.palette);
+  
+  // Get the single raster band for this data type.
+  const raster = data.rasters[0];
+
+  for (let i = 0; i < raster.length; i++) {
+    const value = raster[i];
+    
+    // Skip no-data values (typically large negative numbers)
+    if (value < config.min) {
+        imageData.data[i * 4 + 3] = 0; // Transparent
+        continue;
+    }
+
+    const normalized = normalize(value, config.max, config.min);
+    const colorIndex = Math.floor(normalized * (palette.length - 1));
+    const color = palette[colorIndex];
+
+    imageData.data[i * 4] = color.r;
+    imageData.data[i * 4 + 1] = color.g;
+    imageData.data[i * 4 + 2] = color.b;
+    imageData.data[i * 4 + 3] = config.opacity;
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+
+// --- Main Exported Function ---
+
+/**
+ * The main function to fetch a GeoTIFF from a URL and render it to a canvas.
+ * @param url The URL of the GeoTIFF data layer.
+ * @param apiKey Your Google Maps API key.
+ * @param layerType The type of layer being rendered (e.g., 'annualFlux').
+ * @returns A promise that resolves to an HTMLCanvasElement or null on error.
+ */
+export async function renderGeoTiffToCanvas(
+    url: string,
+    apiKey: string,
+    layerType: LayerType
+): Promise<HTMLCanvasElement | null> {
+    try {
+        const geoTiffData = await downloadGeoTiff(url, apiKey);
+        const config = RENDER_CONFIG[layerType];
+        const canvas = renderPalette(geoTiffData, config);
+        return canvas;
+    } catch (error) {
+        console.error(`[GeoTiffRenderer] Failed to render GeoTIFF for layer ${layerType}:`, error);
+        return null;
+    }
+}
+
+
+// --- Color and Math Helper Functions ---
+
+/**
+ * Creates an {r, g, b} color palette from a hex list of colors.
+ */
+function createPalette(hexColors: string[]): { r: number; g: number; b: number }[] {
+  const rgb = hexColors.map(hexToRgb);
+  const size = 256;
+  const step = (rgb.length - 1) / (size - 1);
+  return Array(size)
+    .fill(0)
+    .map((_, i) => {
+      const index = i * step;
+      const lower = Math.floor(index);
+      const upper = Math.ceil(index);
+      return {
+        r: lerp(rgb[lower].r, rgb[upper].r, index - lower),
+        g: lerp(rgb[lower].g, rgb[upper].g, index - lower),
+        b: lerp(rgb[lower].b, rgb[upper].b, index - lower),
+      };
+    });
+}
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : { r: 0, g: 0, b: 0 };
 }
 
-function normalize(value: number, min: number, max: number): number {
+function normalize(value: number, max: number, min: number): number {
     if (max === min) return 1;
     const result = (value - min) / (max - min);
     return Math.max(0, Math.min(1, result)); // Clamp between 0 and 1
 }
 
-export async function renderGeoTiff(
-    url: string,
-    apiKey: string,
-    layerType: LayerType
-): Promise<HTMLCanvasElement | null> {
-    try {
-        const fullUrl = `${url}&key=${apiKey}`;
-        const tiff = await fromUrl(fullUrl);
-        const image = await tiff.getImage();
-        const rasters = await image.readRasters();
-        const data = rasters[0];
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = image.getWidth();
-        canvas.height = image.getHeight();
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            throw new Error('Failed to create canvas context for rendering.');
-        }
-    
-        const imageData = ctx.createImageData(canvas.width, canvas.height);
-        
-        const config = RENDER_CONFIG[layerType];
-        const palette = config.palette.map(hexToRgb);
-        const { min, max } = config;
-    
-        for (let i = 0; i < data.length; i++) {
-            const val = Array.isArray(data) ? data[i] : (data as any)[i];
-
-            // No-data values are typically large negative numbers
-            if (val < min) {
-                imageData.data[i * 4 + 3] = 0; // Transparent
-                continue;
-            }
-    
-            const normalized = normalize(val, min, max);
-            const colorIndex = Math.floor(normalized * (palette.length - 1));
-            const color = palette[colorIndex];
-            
-            imageData.data[i * 4] = color.r;
-            imageData.data[i * 4 + 1] = color.g;
-            imageData.data[i * 4 + 2] = color.b;
-            // Use different opacity for the building mask vs other layers
-            imageData.data[i * 4 + 3] = layerType === 'buildingMask' ? 128 : 200; 
-        }
-    
-        ctx.putImageData(imageData, 0, 0);
-        return canvas;
-    } catch (error) {
-        console.error(`[GeoTiffRenderer] Failed to render GeoTIFF for layer ${layerType}:`, error);
-        return null;
-    }
+function lerp(x: number, y: number, t: number): number {
+  return x + t * (y - x);
 }
