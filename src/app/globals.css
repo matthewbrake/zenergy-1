@@ -41,7 +41,7 @@
   .dark,
   :root {
     /* App Background Color */
-    --background: 222 47% 6%; /* A very dark blue, near black */
+    --background: 0 0% 0%; /* Pure black background */
     /* Default Text (Foreground) Color */
     --foreground: 210 40% 98%; /* Almost white, for high contrast */
     
