@@ -310,3 +310,5 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     </div>
   );
 }
+
+    
