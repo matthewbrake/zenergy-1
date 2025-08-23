@@ -40,13 +40,16 @@ export default function ConfirmationPage() {
   const renderServiceSpecificDetails = () => {
     // If 'otherServicesData' exists, it means the user came from the HVAC/Roofing/Smart Home flow.
     if (otherServicesData && serviceChoice) {
+      const serviceTypeLabel = appConfig.otherServices.serviceTypeOptions.find(o => o.value === otherServicesData.serviceType)?.label;
+
       return (
         <>
             <div className="flex items-center justify-center gap-2">
                 <Home className="w-6 h-6 text-primary" />
                 <h3 className="font-semibold text-lg">{serviceChoice} Service Details</h3>
             </div>
-            <p><strong>Needs:</strong> {otherServicesData.description}</p>
+            {serviceTypeLabel && <p><strong>Service Type:</strong> {serviceTypeLabel}</p>}
+            {otherServicesData.description && <p><strong>Needs:</strong> {otherServicesData.description}</p>}
             <p><strong>Credit Score:</strong> {appConfig.financialDetails.creditScoreOptions.find(o => o.value === otherServicesData.creditScore)?.label}</p>
             <p><strong>Interest Level:</strong> {appConfig.financialDetails.interestLevelOptions.find(o => o.value === otherServicesData.interestLevel)?.label}</p>
         </>

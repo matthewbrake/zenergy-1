@@ -110,7 +110,7 @@ const solarReport = {
     loading: {
       title: "Analyzing Solar Potential",
       initial: "Initializing analysis...",
-      fetching: (address: string) => `Gathering satellite imagery and solar data for ${address}...`,
+      fetching: "Gathering satellite imagery and solar data for your address...",
       rendering: "Rendering visualization and financial data...",
     },
     errorTitle: 'Analysis Failed',
@@ -122,6 +122,7 @@ const solarReport = {
     goBackButton: 'Go Back',
     resetButton: 'Start New Analysis',
     continueButton: 'Continue to Next Steps',
+    skipButton: 'Skip for now',
     metrics: {
         viability: { label: 'Solar Viability Score', description: 'Overall suitability for solar, based on sun exposure.' },
         panelCount: { label: 'Max Panel Count', description: 'Estimated maximum panels that fit on your roof.' },
@@ -149,8 +150,17 @@ const otherServices = {
     title: 'Tell Us More',
     description: 'Please provide a few more details so we can better assist you.',
     nextPath: '/financial-details',
-    needsLabel: 'Please describe your needs',
-    needsPlaceholder: 'Example: "I need to replace my roof due to storm damage." or "My AC unit is not cooling properly."',
+    serviceTypeLabel: 'What type of service do you need?',
+    serviceTypePlaceholder: 'Select a service type',
+    serviceTypeOptions: [
+        { value: 'installation', label: 'Installation' },
+        { value: 'maintenance', label: 'Maintenance' },
+        { value: 'repair', label: 'Repair' },
+        { value: 'estimate', label: 'Estimate' },
+        { value: 'other', label: 'Other' },
+    ],
+    needsLabel: 'Please describe your needs in more detail',
+    needsPlaceholder: 'e.g., "I need a quote for a new HVAC system for a 2,000 sq ft house." or "My roof is leaking and I need an urgent repair."',
     submitButtonText: 'Continue'
 };
 

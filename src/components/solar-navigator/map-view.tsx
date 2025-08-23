@@ -13,7 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import type { DataLayersResponse, LatLngBox } from '@/lib/types';
+import type { DataLayersResponse } from '@/lib/types';
 import { renderGeoTiff } from '@/lib/geotiff-renderer';
 
 interface MapViewProps {
@@ -29,7 +29,7 @@ interface LayerState {
     label: string;
     active: boolean;
     disabled: boolean;
-    overlay: google.maps.OverlayView | null;
+    overlay: google.maps.Overlay | null;
 }
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -111,10 +111,19 @@ class CanvasOverlay extends google.maps.OverlayView {
     }
 
     onRemove() {
-        if (this.div) {
+        if (this.div && this.div.parentNode) {
             (this.div.parentNode as HTMLElement).removeChild(this.div);
             delete this.div;
         }
+    }
+    
+    setMap(map: google.maps.Map | null) {
+        // This is a bit of a hack to get around the fact that
+        // the default setMap doesn't always trigger onRemove correctly.
+        if (!map && this.div) {
+            this.onRemove();
+        }
+        super.setMap(map);
     }
 }
 
@@ -125,6 +134,8 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Loading Map...');
   const [layers, setLayers] = useState<LayerState[]>([]);
+  const layerOverlaysRef = useRef<{[key in LayerType]?: CanvasOverlay}>({});
+
 
   useEffect(() => {
     loadGoogleMapsScript()
@@ -163,15 +174,13 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     }
   }, [isApiLoaded, location, map]);
 
-  const toggleLayer = useCallback(async (layerId: LayerType) => {
-    if (!map) return;
-    
+  const toggleLayer = useCallback((layerId: LayerType) => {
     setLayers(prevLayers =>
         prevLayers.map(layer =>
             layer.id === layerId ? { ...layer, active: !layer.active } : layer
         )
     );
-  }, [map]);
+  }, []);
 
   // Effect to manage layer rendering based on state
   useEffect(() => {
@@ -183,8 +192,10 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       new google.maps.LatLng(ne.latitude, ne.longitude)
     );
   
-    layers.forEach(async (layer, index) => {
-      if (layer.active && !layer.overlay) {
+    layers.forEach(async (layer) => {
+      const existingOverlay = layerOverlaysRef.current[layer.id];
+
+      if (layer.active && !existingOverlay) {
         // Activate layer
         if (!layer.url) {
           setError(`No URL available for the ${layer.label} layer.`);
@@ -196,12 +207,8 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
           const canvas = await renderGeoTiff(layer.url, API_KEY!, layer.id);
           if (canvas) {
             const overlay = new CanvasOverlay(canvas, bounds);
+            layerOverlaysRef.current[layer.id] = overlay;
             overlay.setMap(map);
-            setLayers(prev => {
-                const newLayers = [...prev];
-                newLayers[index].overlay = overlay;
-                return newLayers;
-            });
           } else {
              throw new Error('GeoTIFF rendering returned null.');
           }
@@ -211,14 +218,10 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
         } finally {
           setLoadingMessage('');
         }
-      } else if (!layer.active && layer.overlay) {
+      } else if (!layer.active && existingOverlay) {
         // Deactivate layer
-        layer.overlay.setMap(null);
-        setLayers(prev => {
-            const newLayers = [...prev];
-            newLayers[index].overlay = null;
-            return newLayers;
-        });
+        existingOverlay.setMap(null);
+        delete layerOverlaysRef.current[layer.id];
       }
     });
   }, [layers, map, visualizationData, API_KEY]);

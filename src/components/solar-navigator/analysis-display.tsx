@@ -8,7 +8,7 @@ import MetricCard from './metric-card';
 import MapView from './map-view';
 import CrmData from './crm-data';
 import FinancialSummary from './financial-summary';
-import { Sun, Zap, Target, RefreshCw, Leaf, ArrowRight } from 'lucide-react';
+import { Sun, Zap, Target, RefreshCw, Leaf, ArrowRight, SkipForward } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { appConfig } from '@/lib/config';
@@ -23,6 +23,10 @@ interface AnalysisDisplayProps {
 export default function AnalysisDisplay({ result, addressData, onReset }: AnalysisDisplayProps) {
   const router = useRouter();
   const { potential } = result;
+  
+  const goToNextStep = () => {
+    router.push(appConfig.solarReport.nextPath);
+  };
 
   const viabilityScore = potential.solarPotential?.maxSunshineHoursPerYear
     ? Math.round((potential.solarPotential.maxSunshineHoursPerYear / 2000) * 100)
@@ -119,7 +123,10 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
         <Button onClick={onReset} size="lg" variant="outline">
           <RefreshCw className="mr-2 h-4 w-4" /> {appConfig.solarReport.resetButton}
         </Button>
-        <Button onClick={() => router.push(appConfig.solarReport.nextPath)} size="lg">
+         <Button onClick={goToNextStep} size="lg" variant="secondary">
+          <SkipForward className="mr-2 h-4 w-4" /> {appConfig.solarReport.skipButton}
+        </Button>
+        <Button onClick={goToNextStep} size="lg">
           {appConfig.solarReport.continueButton} <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
