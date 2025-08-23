@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 // Zod schema for validating the prospect information form
@@ -62,15 +63,39 @@ export type FinancialAnalysis = {
   // Other financing options can be added here if needed
 };
 
-// Maps to the Solar API's SolarPotential sub-object from the `buildingInsights` endpoint
+// This type maps to the full buildingInsights response, containing the solarPotential object.
+export type BuildingInsights = {
+    name: string;
+    center: { latitude: number; longitude: number; };
+    boundingBox: { sw: { latitude: number, longitude: number }, ne: { latitude: number, longitude: number }};
+    imageryDate: { year: number; month: number; day: number; };
+    imageryProcessedDate: { year: number; month: number; day: number; };
+    imageryQuality: 'HIGH' | 'MEDIUM' | 'LOW';
+    solarPotential: {
+        maxArrayPanelsCount: number;
+        maxArrayAreaMeters2: number;
+        maxSunshineHoursPerYear: number;
+        carbonOffsetFactorKgPerMwh: number;
+        wholeRoofStats: any; // Could be typed further
+        roofSegmentStats: any[]; // Could be typed further
+        solarPanelConfigs: any[]; // Could be typed further
+        panelCapacityWatts: number;
+        panelHeightMeters: number;
+        panelWidthMeters: number;
+        panelLifetimeYears: number;
+        yearlyEnergyDcKwh: number;
+        financialAnalyses: any[]; // Contains FinancialAnalysis objects
+    }
+}
+
+// Maps to the Solar API's SolarPotential sub-object and includes the top-level financialAnalysis
 export type SolarPotentialAssessmentOutput = {
   maxArrayPanelsCount?: number;
   maxSunshineHoursPerYear?: number;
   carbonOffsetFactorKgPerMwh?: number;
   yearlyEnergyDcKwh?: number;
   financialAnalysis?: FinancialAnalysis; 
-  solarPotential?: any; // To hold the full solar potential object for deeper analysis if needed
-  sunshineQuantiles?: number[];
+  solarPotential?: BuildingInsights['solarPotential']; // The full, detailed solar potential object
   imageryDate?: any;
   imageryProcessedDate?: any;
   imageryQuality?: string;
@@ -93,7 +118,7 @@ export type VisualizeSolarDataLayersOutput = {
 
 // The combined result passed to the solar report page
 export type AnalysisResult = {
-  potential: SolarPotentialAssessmentOutput;
+  potential: SolarPotentialAssessmentOutput & { solarPotential: BuildingInsights['solarPotential'] }; // Ensure solarPotential is not optional here
   visualization: VisualizeSolarDataLayersOutput;
 };
 

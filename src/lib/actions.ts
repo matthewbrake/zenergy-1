@@ -1,6 +1,7 @@
+
 'use server';
 
-import type { AnalysisResult, SolarPotentialAssessmentOutput, VisualizeSolarDataLayersOutput } from '@/lib/types';
+import type { AnalysisResult, SolarPotentialAssessmentOutput, VisualizeSolarDataLayersOutput, BuildingInsights, FinancialAnalysis } from '@/lib/types';
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 const SOLAR_API_BASE_URL = 'https://solar.googleapis.com';
@@ -72,6 +73,8 @@ export async function getSolarAnalysis(location: { lat: number; lng: number }): 
       'radius_meters': '50',
       'view': 'FULL_LAYERS',
       'requiredQuality': 'HIGH',
+      // Get a building mask layer as well
+      'pixel_size_meters': '0.5',
     });
 
     console.log('[SERVER ACTION] Running Solar API calls in parallel...');
@@ -95,7 +98,7 @@ export async function getSolarAnalysis(location: { lat: number; lng: number }): 
       throw new Error(errorMessage);
     }
     
-    const buildingInsights = (potentialResult as PromiseFulfilledResult<any>).value;
+    const buildingInsights = (potentialResult as PromiseFulfilledResult<BuildingInsights>).value;
     const dataLayers = (visualizationResult as PromiseFulfilledResult<any>).value;
 
     if (!buildingInsights || !buildingInsights.solarPotential) {
@@ -103,25 +106,35 @@ export async function getSolarAnalysis(location: { lat: number; lng: number }): 
     }
 
     console.log('[SERVER ACTION] Both API calls completed successfully.');
-    console.log('[SERVER ACTION] Building Insights Response:', JSON.stringify(buildingInsights, null, 2));
-    console.log('[SERVER ACTION] Data Layers Response:', JSON.stringify(dataLayers, null, 2));
     
+    // We get the full solar potential object and also find the default financial analysis to lift it to the top level
     const potential: SolarPotentialAssessmentOutput = {
-      ...buildingInsights.solarPotential,
-      financialAnalysis: buildingInsights.solarPotential.financialAnalyses?.find((a: any) => a.defaultBill === true),
+      solarPotential: buildingInsights.solarPotential,
+      maxArrayPanelsCount: buildingInsights.solarPotential.maxArrayPanelsCount,
+      maxSunshineHoursPerYear: buildingInsights.solarPotential.maxSunshineHoursPerYear,
+      carbonOffsetFactorKgPerMwh: buildingInsights.solarPotential.carbonOffsetFactorKgPerMwh,
+      yearlyEnergyDcKwh: buildingInsights.solarPotential.yearlyEnergyDcKwh,
+      financialAnalysis: buildingInsights.solarPotential.financialAnalyses?.find((a: FinancialAnalysis) => a.defaultBill === true),
+      imageryDate: buildingInsights.imageryDate,
+      imageryProcessedDate: buildingInsights.imageryProcessedDate,
+      imageryQuality: buildingInsights.imageryQuality,
+      panelLifetimeYears: buildingInsights.solarPotential.panelLifetimeYears,
     };
     
     const visualization: VisualizeSolarDataLayersOutput = {
-      rgbImageryUrl: dataLayers.imageryQuality === 'HIGH' ? dataLayers.rgbUrl : '',
+      rgbImageryUrl: dataLayers.imageryUrl, // Corrected from rgbUrl
       digitalSurfaceModelUrl: dataLayers.dsmUrl,
       annualSolarFluxUrl: dataLayers.fluxUrl,
-      monthlySolarFluxUrls: dataLayers.monthlyFluxUrl ? [dataLayers.monthlyFluxUrl] : [],
+      monthlySolarFluxUrls: dataLayers.monthlyFlux ? [dataLayers.monthlyFlux] : [], // API returns one URL string
       hourlyShadeUrls: dataLayers.hourlyShadeUrls || [],
-      buildingMaskUrl: '', 
-      boundingBox: buildingInsights.boundingBox,
+      buildingMaskUrl: dataLayers.maskUrl, // URL for the building mask
+      boundingBox: buildingInsights.boundingBox ? {
+        sw: { lat: buildingInsights.boundingBox.sw.latitude, lng: buildingInsights.boundingBox.sw.longitude },
+        ne: { lat: buildingInsights.boundingBox.ne.latitude, lng: buildingInsights.boundingBox.ne.longitude },
+      } : undefined,
     };
 
-    return { success: true, data: { potential, visualization } };
+    return { success: true, data: { potential, visualization } as AnalysisResult };
 
   } catch (error: unknown) {
     const finalErrorMessage = error instanceof Error ? error.message : 'An unknown error occurred during analysis.';

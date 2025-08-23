@@ -8,7 +8,7 @@ import MetricCard from './metric-card';
 import MapView from './map-view';
 import CrmData from './crm-data';
 import FinancialSummary from './financial-summary';
-import { Sun, Zap, Target, RefreshCw, Leaf, ArrowRight } from 'lucide-react';
+import { Sun, Zap, Target, RefreshCw, Leaf, ArrowRight, ChevronsUpDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { appConfig } from '@/lib/config';
@@ -46,7 +46,7 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
            <Card className="h-full shadow-lg">
-             <CardContent className="p-2 h-[500px]">
+             <CardContent className="p-0 h-[500px] relative">
               <MapView location={addressData.location} visualizationData={result.visualization} />
              </CardContent>
            </Card>
@@ -87,7 +87,9 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
         <CardContent>
           <Accordion type="single" collapsible defaultValue="financials">
             <AccordionItem value="financials">
-              <AccordionTrigger className="text-lg font-semibold">{appConfig.solarReport.details.financials.title}</AccordionTrigger>
+               <AccordionTrigger className="text-lg font-semibold flex justify-between items-center w-full">
+                  <span>{appConfig.solarReport.details.financials.title}</span>
+               </AccordionTrigger>
               <AccordionContent>
                 {potential.financialAnalysis ? (
                    <FinancialSummary financialAnalysis={potential.financialAnalysis} solarPotential={potential} />
@@ -97,7 +99,9 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
               </AccordionContent>
             </AccordionItem>
              <AccordionItem value="crm-data">
-              <AccordionTrigger className="text-lg font-semibold">{appConfig.solarReport.details.crm.title}</AccordionTrigger>
+               <AccordionTrigger className="text-lg font-semibold flex justify-between items-center w-full">
+                  <span>{appConfig.solarReport.details.crm.title}</span>
+               </AccordionTrigger>
               <AccordionContent>
                 <CrmData result={result} addressData={addressData} />
               </AccordionContent>

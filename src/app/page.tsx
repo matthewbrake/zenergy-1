@@ -11,18 +11,22 @@ import useLocalStorage from '@/hooks/use-local-storage';
 export default function ServiceSelectionPage() {
   const router = useRouter();
   const [, setServiceChoice] = useLocalStorage('serviceChoice', null);
-  const [, setProspectData] = useLocalStorage('prospectData', null);
+  
+  // Clear all data when returning to the main page to ensure a clean start
+  if(typeof window !== 'undefined') {
+    localStorage.clear();
+  }
+
 
   const handleServiceSelect = (service: { name: string; path: string; }) => {
     // For non-solar services, store the choice and go to prospect form first
-    if (service.path === '/other-services') {
+    if (service.path !== '/address-entry') {
         setServiceChoice(service.name);
-        router.push('/prospect-form');
     } else {
-        // For solar, clear any previous service choice and go to its path
+        // For solar, clear any previous service choice
         setServiceChoice(null);
-        router.push(service.path);
     }
+    router.push(service.path);
   };
 
   return (

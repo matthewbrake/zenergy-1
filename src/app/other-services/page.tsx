@@ -14,10 +14,11 @@ import useLocalStorage from '@/hooks/use-local-storage';
 export default function OtherServicesPage() {
   const router = useRouter();
   const [description, setDescription] = useState('');
-  const [, setOtherServicesData] = useLocalStorage('otherServicesData', { description: '' });
+  const [, setOtherServicesData] = useLocalStorage('otherServicesData', { description: '', creditScore: '', interestLevel: '' });
 
 
   const handleSubmit = () => {
+    // Only the description is set here. Credit score and interest level are set on the next page.
     const formData = { description };
     setOtherServicesData(formData);
     router.push(appConfig.otherServices.nextPath);

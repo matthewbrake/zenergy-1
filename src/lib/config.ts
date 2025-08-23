@@ -23,18 +23,17 @@
  *
  * 1. SOLAR PATH:
  *    - Step 1: `/` (Service Selection) -> User clicks "Solar"
- *    - Step 2: `/prospect-form` -> User enters contact info.
- *    - Step 3: `/address-entry` -> User enters property address for analysis.
- *    - Step 4: `/solar-report` -> Displays API results (map, panels, savings).
- *    - Step 5: `/financial-details` -> User provides bill, credit, and interest info.
- *    - Step 6: `/scheduling` -> User books an appointment.
- *    - Step 7: `/confirmation` -> Shows a summary of all collected data.
+ *    - Step 2: `/address-entry` -> User enters property address for analysis.
+ *    - Step 3: `/solar-report` -> Displays API results (map, panels, savings).
+ *    - Step 4: `/financial-details` -> User provides bill, credit, and interest info.
+ *    - Step 5: `/scheduling` -> User books an appointment.
+ *    - Step 6: `/confirmation` -> Shows a summary of all collected data.
  *
  * 2. OTHER SERVICES PATH (Roofing, HVAC, Smart Home):
  *    - Step 1: `/` (Service Selection) -> User clicks "Roofing", "HVAC", etc.
  *    - Step 2: `/prospect-form` -> User enters contact info.
  *    - Step 3: `/other-services` -> User describes their specific needs.
- *    - Step 4: `/financial-details` -> User provides credit and interest info (bill section is hidden).
+ *    - Step 4: `/financial-details` -> User provides credit and interest info (solar sections are hidden).
  *    - Step 5: `/scheduling` -> User books an appointment.
  *    - Step 6: `/confirmation` -> Shows a summary of all collected data.
  *
@@ -66,10 +65,10 @@ const serviceSelection = {
   description: 'What service are you interested in today?',
   comingSoonText: 'Coming Soon',
   services: [
-    { name: 'Solar', icon: Sun, enabled: true, path: '/prospect-form' }, // Solar path starts at prospect form
-    { name: 'Roofing', icon: Home, enabled: true, path: '/other-services' },
-    { name: 'HVAC', icon: Wind, enabled: true, path: '/other-services' },
-    { name: 'Smart Home', icon: Thermometer, enabled: true, path: '/other-services' },
+    { name: 'Solar', icon: Sun, enabled: true, path: '/address-entry' }, // Solar path starts at address entry
+    { name: 'Roofing', icon: Home, enabled: true, path: '/prospect-form' },
+    { name: 'HVAC', icon: Wind, enabled: true, path: '/prospect-form' },
+    { name: 'Smart Home', icon: Thermometer, enabled: true, path: '/prospect-form' },
   ],
 };
 
@@ -77,14 +76,13 @@ const serviceSelection = {
 // =================================================================
 // 3. PROSPECT INFORMATION PAGE (`/prospect-form`)
 //    The form where the user enters their contact details. This is the
-//    first step for all user paths.
+//    first step for all non-solar paths.
 // =================================================================
 const prospectForm = {
     title: 'Prospect Information',
     description: "Let's start by gathering some basic information to create your profile.",
-    // nextPath is determined dynamically on the page based on the service selected
+    // For non-solar paths, this form leads to the 'other-services' page.
     nextPath: {
-      solar: '/address-entry',
       other: '/other-services'
     },
     // --- Form Field Labels & Placeholders ---
@@ -132,7 +130,7 @@ const solarReport = {
     retryButton: 'Try Again',
     goBackButton: 'Go Back',
     resetButton: 'Start New Analysis',
-    continueButton: 'Continue to Financial Details',
+    continueButton: 'Continue to Next Steps',
     metrics: {
         viability: { label: 'Solar Viability Score', description: 'Overall suitability for solar, based on sun exposure.' },
         panelCount: { label: 'Max Panel Count', description: 'Estimated maximum panels that fit on your roof.' },
@@ -147,7 +145,8 @@ const solarReport = {
             noData: 'Financial analysis data is not available for this location.'
         },
         crm: {
-            title: 'CRM Integration Data'
+            title: 'CRM Integration Data',
+            description: "The following data object represents the enriched information that would be stored in your CRM. This provides your sales team with actionable intelligence for lead prioritization and follow-up."
         }
     }
 };
@@ -160,7 +159,7 @@ const solarReport = {
 const otherServices = {
     title: 'Tell Us More',
     description: 'Please provide a few more details so we can better assist you.',
-    nextPath: '/financial-details',
+    nextPath: '/financial-details', // After this, user goes to the same financial page
     needsLabel: 'Please describe your needs',
     needsPlaceholder: 'Example: "I need to replace my roof due to storm damage." or "My AC unit is not cooling properly."',
     submitButtonText: 'Continue'
@@ -170,24 +169,24 @@ const otherServices = {
 // =================================================================
 // 7. FINANCIAL DETAILS PAGE (`/financial-details`)
 //    (ALL PATHS) Gathers bill info (solar only), credit score, and
-//    interest level. This is the final data collection step.
+//    interest level.
 // =================================================================
 const financialDetails = {
-    title: 'Next Steps & Financials',
+    title: 'Final Steps',
     description: 'Just a few more details to help us prepare for your consultation.',
     nextPath: '/scheduling',
     // --- Bill Slider (Solar Only) ---
     monthlyBillLabel: 'Average Monthly Electric Bill',
     // --- Bill Upload ---
-    billUploadTitle: "Want a More Accurate Quote?",
-    billUploadDescription: "In a full production environment, you could enable a feature here to upload the last 4 months of your utility bill (PDF/Image, <5MB each). This feature requires a paid Formspree plan or a custom backend.",
+    billUploadTitle: "Want a More Accurate Quote? (Feature Disabled)",
+    billUploadDescription: "To enable file uploads, upgrade to a paid Formspree plan and re-enable this feature in the code.",
     // --- Credit Score & Interest Level (All Paths) ---
     creditScoreLabel: 'What is your approximate credit score?',
     creditScoreOptions: [
-        { value: 'excellent', label: 'Excellent (720+)' },
-        { value: 'good', label: 'Good (680-719)' },
-        { value: 'fair', label: 'Fair (620-679)' },
-        { value: 'poor', label: 'Needs Work (Below 620)' },
+        { value: 'excellent', label: 'Excellent', range: '720+' },
+        { value: 'good', label: 'Good', range: '640-719' },
+        { value: 'fair', label: 'Fair', range: '600-639' },
+        { value: 'poor', label: 'Needs Work', range: 'Below 600' },
     ],
     interestLevelLabel: 'How soon are you looking to start?',
     interestLevelOptions: [
