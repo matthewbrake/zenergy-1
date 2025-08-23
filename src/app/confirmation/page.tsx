@@ -8,6 +8,7 @@ import { appConfig } from '@/lib/config';
 import { CheckCircle, Mail, Printer, RotateCcw, Home, Sun } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/use-local-storage';
+import { useEffect, useState } from 'react';
 
 export default function ConfirmationPage() {
   const router = useRouter();
@@ -17,6 +18,61 @@ export default function ConfirmationPage() {
   const [appointmentData] = useLocalStorage('appointmentData', null);
   const [otherServicesData] = useLocalStorage('otherServicesData', null);
   const [serviceChoice] = useLocalStorage('serviceChoice', null);
+  const [financialData] = useLocalStorage('financialData', null); // Added to gather all data
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // This effect runs once when the component mounts to submit all collected data.
+  useEffect(() => {
+    const submitAllData = async () => {
+      // Prevent re-submission if already submitting or submitted
+      if (isSubmitting || !prospectData) return;
+      
+      setIsSubmitting(true);
+
+      // Consolidate all data from local storage into a single object
+      const finalSubmissionData = {
+        ...prospectData,
+        serviceChoice,
+        address: addressData,
+        financials: financialData,
+        appointment: appointmentData,
+        otherServiceNeeds: otherServicesData,
+      };
+
+      try {
+        const response = await fetch("https://formspree.io/f/mrblnyld", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(finalSubmissionData),
+        });
+
+        if (response.ok) {
+          toast({
+            title: "Quote Submitted Successfully!",
+            description: "We've received your information and will be in touch shortly.",
+            variant: "default",
+          });
+        } else {
+          throw new Error('Form submission failed.');
+        }
+      } catch (error) {
+        console.error("Form submission error:", error);
+        toast({
+          title: "Submission Error",
+          description: "There was a problem submitting your information. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+    
+    submitAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array ensures this runs only once on mount
 
 
   const handlePrint = () => {
@@ -39,7 +95,7 @@ export default function ConfirmationPage() {
 
   const renderServiceSpecificDetails = () => {
     // If 'otherServicesData' exists, it means the user came from the HVAC/Roofing/Smart Home flow.
-    if (otherServicesData && serviceChoice) {
+    if (otherServicesData && serviceChoice && serviceChoice !== 'Solar') {
       const serviceTypeLabel = appConfig.otherServices.serviceTypeOptions.find(o => o.value === otherServicesData.serviceType)?.label;
 
       return (
@@ -50,8 +106,6 @@ export default function ConfirmationPage() {
             </div>
             {serviceTypeLabel && <p><strong>Service Type:</strong> {serviceTypeLabel}</p>}
             {otherServicesData.description && <p><strong>Needs:</strong> {otherServicesData.description}</p>}
-            <p><strong>Credit Score:</strong> {appConfig.financialDetails.creditScoreOptions.find(o => o.value === otherServicesData.creditScore)?.label}</p>
-            <p><strong>Interest Level:</strong> {appConfig.financialDetails.interestLevelOptions.find(o => o.value === otherServicesData.interestLevel)?.label}</p>
         </>
       )
     }
@@ -67,6 +121,18 @@ export default function ConfirmationPage() {
        </>
     )
   }
+  
+  const renderFinancialDetails = () => {
+    if (!financialData) return null;
+    return (
+        <div className="space-y-1 text-center">
+            {financialData.monthlyBill && <p><strong>Avg. Monthly Bill:</strong> ${financialData.monthlyBill}</p>}
+            {financialData.creditScore && <p><strong>Credit Score:</strong> {appConfig.financialDetails.creditScoreOptions.find(o => o.value === financialData.creditScore)?.label}</p>}
+            {financialData.interestLevel && <p><strong>Interest Level:</strong> {appConfig.financialDetails.interestLevelOptions.find(o => o.value === financialData.interestLevel)?.label}</p>}
+        </div>
+    )
+  }
+
 
   return (
     <main className="flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-8 bg-background">
@@ -105,6 +171,11 @@ export default function ConfirmationPage() {
                 <div className="space-y-1 text-center">
                    {renderServiceSpecificDetails()}
                 </div>
+
+                 <hr className="my-4 border-dashed" />
+                
+                {/* Financial Details */}
+                {renderFinancialDetails()}
                 
                 <hr className="my-4 border-dashed" />
 

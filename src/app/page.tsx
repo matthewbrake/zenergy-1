@@ -40,10 +40,12 @@ export default function ServiceSelectionPage() {
     },
   });
 
+  // This function now only saves data to local storage and navigates.
+  // The actual submission to a server/Formspree happens on the confirmation page.
   const onSubmit = (data: ProspectData) => {
     if (!selectedService) {
         setSelectionError('Please select a service before continuing.');
-        return false;
+        return; // Return early if no service is selected
     }
     setSelectionError(null);
     setProspectData(data);
@@ -58,7 +60,6 @@ export default function ServiceSelectionPage() {
     } else {
         router.push(selectedService.path);
     }
-    return true;
   };
 
   const handleServiceSelect = (service: { name: string; path: string; }) => {
@@ -96,20 +97,13 @@ export default function ServiceSelectionPage() {
             </CardHeader>
             <CardContent>
              <Form {...form}>
+                {/* 
+                  This form no longer uses action/method attributes. 
+                  Submission is handled by the `onSubmit` function passed to `form.handleSubmit`.
+                  This prevents premature submission to a third party like Formspree.
+                */}
                 <form 
-                    action="https://formspree.io/f/mrblnyld"
-                    method="POST"
-                    onSubmit={(e) => {
-                        const isValid = form.trigger();
-                        if (!isValid || !selectedService) {
-                            e.preventDefault();
-                            if (!selectedService) {
-                                setSelectionError('Please select a service before continuing.');
-                            }
-                        } else {
-                            onSubmit(form.getValues());
-                        }
-                    }}
+                    onSubmit={form.handleSubmit(onSubmit)}
                     className="space-y-8"
                 >
                     {/* Step 1: Service Selection */}
@@ -198,5 +192,3 @@ export default function ServiceSelectionPage() {
     </main>
   );
 }
-
-    

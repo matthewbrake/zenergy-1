@@ -2,7 +2,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -15,28 +15,47 @@ import { cn } from '@/lib/utils';
 
 export default function FinancialDetailsPage() {
   const router = useRouter();
-  const [prospectData] = useLocalStorage('prospectData', null);
-  const [addressData] = useLocalStorage('addressData', null);
-  const [otherServicesData, setOtherServicesData] = useLocalStorage('otherServicesData', null);
+  const [financialData, setFinancialData] = useLocalStorage('financialData', {
+    monthlyBill: 150,
+    creditScore: '',
+    interestLevel: '',
+  });
+
   const [serviceChoice] = useLocalStorage('serviceChoice', null);
-
-  // State for this form
-  const [monthlyBill, setMonthlyBill] = useState(150);
-  const [creditScore, setCreditScore] = useState('');
-  const [interestLevel, setInterestLevel] = useState('');
-
+  
+  // Initialize local state with data from localStorage or defaults
+  const [monthlyBill, setMonthlyBill] = useState(financialData.monthlyBill || 150);
+  const [creditScore, setCreditScore] = useState(financialData.creditScore || '');
+  const [interestLevel, setInterestLevel] = useState(financialData.interestLevel || '');
+  
   const isSolarPath = serviceChoice === 'Solar';
   const isFormComplete = creditScore && interestLevel;
+  
+  // When component mounts, sync local state with localStorage
+  useEffect(() => {
+    setMonthlyBill(financialData.monthlyBill || 150);
+    setCreditScore(financialData.creditScore || '');
+    setInterestLevel(financialData.interestLevel || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    // In a real app, you'd combine this data with other stored data
-    // and send to a CRM. For this demo, we store it and proceed.
-    if(otherServicesData && !isSolarPath) {
-        setOtherServicesData({ ...otherServicesData, creditScore, interestLevel });
+    // Construct data object to save
+    const dataToSave: any = {
+      creditScore,
+      interestLevel,
+    };
+    
+    // Only include monthlyBill if it's the solar path
+    if (isSolarPath) {
+      dataToSave.monthlyBill = monthlyBill;
     }
+    
+    // Save the combined data to local storage
+    setFinancialData(dataToSave);
 
     router.push(appConfig.financialDetails.nextPath);
   }

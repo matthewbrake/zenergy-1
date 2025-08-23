@@ -29,12 +29,13 @@ interface LayerState {
     label: string;
     active: boolean;
     disabled: boolean;
-    overlay: google.maps.Overlay | null;
 }
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-let googleMapsScriptLoadingPromise: Promise<void> | null = null;
 
+// --- Map Script Loader ---
+// This ensures the Google Maps script is loaded only once.
+let googleMapsScriptLoadingPromise: Promise<void> | null = null;
 const loadGoogleMapsScript = () => {
   if (googleMapsScriptLoadingPromise) {
     return googleMapsScriptLoadingPromise;
@@ -73,7 +74,8 @@ const loadGoogleMapsScript = () => {
   return googleMapsScriptLoadingPromise;
 };
 
-// Define the custom overlay class once outside the component
+// --- Custom Canvas Overlay ---
+// This class is responsible for placing the rendered GeoTIFF canvas onto the map.
 class CanvasOverlay extends google.maps.OverlayView {
     private canvas: HTMLCanvasElement;
     private bounds: google.maps.LatLngBounds;
@@ -130,29 +132,35 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
   const [loadingMessage, setLoadingMessage] = useState('Loading Map...');
   const [layers, setLayers] = useState<LayerState[]>([]);
   
+  // Use a ref to store overlays to avoid re-renders and manage their state.
   const overlaysRef = useRef<Map<LayerType, CanvasOverlay>>(new Map());
 
+  // Effect to load the Google Maps script on component mount.
   useEffect(() => {
     loadGoogleMapsScript()
       .then(() => setIsApiLoaded(true))
-      .catch((err) => setError("Mapping service could not be loaded."));
+      .catch((err) => {
+        console.error("MapView script loading error:", err)
+        setError("Mapping service could not be loaded.");
+      });
   }, []);
   
-  // Initialize layers once visualization data is available
+  // Effect to initialize the layer state once visualization data is available.
   useEffect(() => {
     if (visualizationData) {
       setLayers([
-        { id: 'annualFlux', url: visualizationData.annualFluxUrl, label: 'Annual Sun Exposure', active: true, disabled: !visualizationData.annualFluxUrl, overlay: null },
-        { id: 'buildingMask', url: visualizationData.maskUrl, label: 'Building Mask', active: false, disabled: !visualizationData.maskUrl, overlay: null },
-        { id: 'monthlyFlux', url: visualizationData.monthlyFluxUrl, label: 'Monthly Sun Exposure', active: false, disabled: !visualizationData.monthlyFluxUrl, overlay: null },
-        { id: 'hourlyShade', url: visualizationData.hourlyShadeUrls?.[0], label: 'Hourly Shade (Dec)', active: false, disabled: !visualizationData.hourlyShadeUrls || visualizationData.hourlyShadeUrls.length === 0, overlay: null },
+        { id: 'annualFlux', url: visualizationData.annualFluxUrl, label: 'Annual Sun Exposure', active: true, disabled: !visualizationData.annualFluxUrl },
+        { id: 'buildingMask', url: visualizationData.maskUrl, label: 'Building Mask', active: false, disabled: !visualizationData.maskUrl },
+        { id: 'monthlyFlux', url: visualizationData.monthlyFluxUrl, label: 'Monthly Sun Exposure', active: false, disabled: !visualizationData.monthlyFluxUrl },
+        { id: 'hourlyShade', url: visualizationData.hourlyShadeUrls?.[0], label: 'Hourly Shade (Dec)', active: false, disabled: !visualizationData.hourlyShadeUrls || visualizationData.hourlyShadeUrls.length === 0 },
       ]);
     }
   }, [visualizationData]);
 
-
+  // Effect to initialize the map itself once the API is loaded.
   useEffect(() => {
     if (isApiLoaded && mapRef.current && !map) {
+      setLoadingMessage("Initializing map...");
       const mapInstance = new window.google.maps.Map(mapRef.current, {
         center: location,
         zoom: 20,
@@ -163,6 +171,8 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       });
       setMap(mapInstance);
       setLoadingMessage('');
+      
+      // Add a marker for the specified location.
       new window.google.maps.marker.AdvancedMarkerElement({
         position: location,
         map: mapInstance,
@@ -178,7 +188,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     );
   }, []);
 
-  // Effect to manage layer rendering based on state
+  // Main effect to manage rendering and removing layer overlays based on state.
   useEffect(() => {
     if (!map || !visualizationData?.boundingBox) return;
   
@@ -191,35 +201,39 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     layers.forEach(async (layer) => {
       const existingOverlay = overlaysRef.current.get(layer.id);
 
+      // If layer should be active but there's no overlay, create it.
       if (layer.active && !existingOverlay) {
-        // Activate layer
         if (!layer.url) {
-          setError(`No URL available for the ${layer.label} layer.`);
+          console.warn(`No URL for layer: ${layer.label}`);
           return;
         }
   
         setLoadingMessage(`Rendering ${layer.label}...`);
         try {
+          // The renderGeoTiff function does the heavy lifting of fetching and drawing the image.
           const canvas = await renderGeoTiff(layer.url, API_KEY!, layer.id);
-          if (canvas) {
+          if (canvas && map) { // Check if map is still mounted
             const overlay = new CanvasOverlay(canvas, bounds);
             overlaysRef.current.set(layer.id, overlay);
             overlay.setMap(map);
           } else {
-             throw new Error('GeoTIFF rendering returned null.');
+             throw new Error('GeoTIFF rendering returned null or map was unmounted.');
           }
         } catch (err: any) {
           setError(`Could not display ${layer.label} overlay: ${err.message}`);
-          setLayers(prev => prev.map(l => l.id === layer.id ? {...l, active: false} : l)); // Deactivate on error
+          // Deactivate layer on error to prevent trying again.
+          setLayers(prev => prev.map(l => l.id === layer.id ? {...l, active: false} : l));
         } finally {
           setLoadingMessage('');
         }
-      } else if (!layer.active && existingOverlay) {
-        // Deactivate layer
+      } 
+      // If layer should be inactive but there's an overlay, remove it.
+      else if (!layer.active && existingOverlay) {
         existingOverlay.setMap(null);
         overlaysRef.current.delete(layer.id);
       }
     });
+  // This effect depends on the layers' active state and the map instance.
   }, [layers, map, visualizationData, API_KEY]);
   
   if (!API_KEY) {
@@ -228,7 +242,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     );
   }
 
-  const isLoading = !isApiLoaded || !!loadingMessage;
+  const isLoading = !isApiLoaded || !map || !!loadingMessage;
 
   return (
     <div className="h-full w-full rounded-lg overflow-hidden relative" data-ai-hint="map satellite">
@@ -283,5 +297,3 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     </div>
   );
 }
-
-    
