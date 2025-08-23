@@ -2,7 +2,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ProspectSchema, type ProspectData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { User, Building, Phone, Mail } from 'lucide-react';
 import { appConfig } from '@/lib/config';
+import useLocalStorage from '@/hooks/use-local-storage';
 
 
 export default function ProspectFormPage() {
     const router = useRouter();
+    const [, setProspectData] = useLocalStorage('prospectData', null);
+    
     const form = useForm<ProspectData>({
         resolver: zodResolver(ProspectSchema),
         defaultValues: {
@@ -27,15 +30,28 @@ export default function ProspectFormPage() {
     });
 
     const onSubmit = (data: ProspectData) => {
-        // In a real app, save this to a global state
-        console.log('Prospect Data:', data);
-        router.push('/address-entry');
+        setProspectData(data);
+        router.push(appConfig.prospectForm.nextPath);
+    };
+
+    const formatPhoneNumber = (value: string) => {
+        if (!value) return value;
+        const phoneNumber = value.replace(/[^\d]/g, '');
+        const phoneNumberLength = phoneNumber.length;
+        if (phoneNumberLength < 4) return phoneNumber;
+        if (phoneNumberLength < 7) {
+            return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+        }
+        return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
     };
 
     return (
         <main className="flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-8 bg-background">
             <div className="w-full max-w-2xl mx-auto">
-                 <header className="text-center mb-8">
+                 <header className="text-center mb-8 flex flex-col items-center">
+                    {appConfig.global.logo && (
+                        <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-12 w-auto mb-4" data-ai-hint="logo" />
+                    )}
                     <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
                 </header>
                 <Card className="w-full shadow-lg border-2 border-primary/20">
@@ -52,11 +68,11 @@ export default function ProspectFormPage() {
                                 name="firstName"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>First Name</FormLabel>
+                                    <FormLabel>{appConfig.prospectForm.firstNameLabel}</FormLabel>
                                     <div className="relative">
                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <FormControl>
-                                        <Input placeholder="John" {...field} className="pl-10" />
+                                        <Input placeholder={appConfig.prospectForm.firstNamePlaceholder} {...field} className="pl-10" />
                                         </FormControl>
                                     </div>
                                     <FormMessage />
@@ -68,11 +84,11 @@ export default function ProspectFormPage() {
                                 name="lastName"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Last Name</FormLabel>
+                                    <FormLabel>{appConfig.prospectForm.lastNameLabel}</FormLabel>
                                     <div className="relative">
                                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <FormControl>
-                                        <Input placeholder="Doe" {...field} className="pl-10" />
+                                        <Input placeholder={appConfig.prospectForm.lastNamePlaceholder} {...field} className="pl-10" />
                                         </FormControl>
                                     </div>
                                     <FormMessage />
@@ -85,11 +101,11 @@ export default function ProspectFormPage() {
                                 name="companyName"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Company Name</FormLabel>
+                                    <FormLabel>{appConfig.prospectForm.companyNameLabel}</FormLabel>
                                     <div className="relative">
                                     <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                     <FormControl>
-                                        <Input placeholder="ACME Inc." {...field} className="pl-10" />
+                                        <Input placeholder={appConfig.prospectForm.companyNamePlaceholder} {...field} className="pl-10" />
                                     </FormControl>
                                     </div>
                                     <FormMessage />
@@ -98,31 +114,39 @@ export default function ProspectFormPage() {
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField
-                                control={form.control}
-                                name="phone"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Phone Number</FormLabel>
-                                    <div className="relative">
-                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <FormControl>
-                                        <Input placeholder="(555) 123-4567" {...field} className="pl-10" />
-                                        </FormControl>
-                                    </div>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
+                                    control={form.control}
+                                    name="phone"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{appConfig.prospectForm.phoneLabel}</FormLabel>
+                                            <div className="relative">
+                                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                <FormControl>
+                                                    <Input
+                                                        placeholder={appConfig.prospectForm.phonePlaceholder}
+                                                        {...field}
+                                                        onChange={(e) => {
+                                                            const formatted = formatPhoneNumber(e.target.value);
+                                                            field.onChange(formatted);
+                                                        }}
+                                                        className="pl-10"
+                                                    />
+                                                </FormControl>
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
                                 />
                                 <FormField
                                 control={form.control}
                                 name="email"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Email Address</FormLabel>
+                                    <FormLabel>{appConfig.prospectForm.emailLabel}</FormLabel>
                                     <div className="relative">
                                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <FormControl>
-                                        <Input placeholder="john.doe@acme.com" {...field} className="pl-10" />
+                                        <Input placeholder={appConfig.prospectForm.emailPlaceholder} {...field} className="pl-10" />
                                         </FormControl>
                                     </div>
                                     <FormMessage />
@@ -132,7 +156,7 @@ export default function ProspectFormPage() {
                             </div>
                             <div className="flex justify-end pt-4">
                                 <Button type="submit" size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                                Continue
+                                    {appConfig.prospectForm.submitButtonText}
                                 </Button>
                             </div>
                             </form>

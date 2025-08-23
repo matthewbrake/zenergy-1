@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -23,8 +24,13 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
   const router = useRouter();
   const { potential } = result;
   
-  const viabilityScore = potential.sunshineQuantiles && potential.sunshineQuantiles.length > 0
-    ? Math.round(potential.sunshineQuantiles[Math.floor(potential.sunshineQuantiles.length * 0.8)] / (potential.maxSunshineHoursPerYear || 2000) * 100)
+  // Calculate a more robust viability score
+  const viabilityScore = potential.solarPotential?.maxArrayPanelsCount && potential.solarPotential.maxSunshineHoursPerYear
+    ? Math.round(
+        ((potential.solarPotential.maxSunshineHoursPerYear / 2000) * 0.7 + // Weight sunshine hours
+         (potential.solarPotential.maxArrayPanelsCount / 50) * 0.3) // Weight panel count
+        * 100
+      )
     : 75; // Default score
 
   const twentyYearSavings = potential.financialAnalysis?.cashPurchaseSavings?.savings?.savingsYear20?.units || 0;
@@ -48,50 +54,50 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
         <div className="space-y-4">
           <MetricCard 
             icon={Target}
-            label="Solar Viability Score"
-            value={`${viabilityScore}/100`}
-            description="Overall suitability for solar, based on sun exposure."
+            label={appConfig.solarReport.metrics.viability.label}
+            value={`${Math.min(viabilityScore, 100)}/100`}
+            description={appConfig.solarReport.metrics.viability.description}
           />
           <MetricCard
             icon={Zap}
-            label="Max Panel Count"
+            label={appConfig.solarReport.metrics.panelCount.label}
             value={potential.maxArrayPanelsCount || 'N/A'}
-            description="The estimated maximum number of solar panels that can fit on your roof."
+            description={appConfig.solarReport.metrics.panelCount.description}
           />
           <MetricCard
             icon={Sun}
-            label="20-Year Savings"
+            label={appConfig.solarReport.metrics.savings.label}
             value={`${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(twentyYearSavings)}`}
-            description="Estimated savings over two decades with a cash purchase."
+            description={appConfig.solarReport.metrics.savings.description}
           />
            <MetricCard
             icon={Leaf}
-            label="Carbon Offset"
+            label={appConfig.solarReport.metrics.carbonOffset.label}
             value={`${carbonOffset.toFixed(0)} kg/MWh`}
-            description="CO₂ offset by generating your own clean energy."
+            description={appConfig.solarReport.metrics.carbonOffset.description}
           />
         </div>
       </div>
       
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Financial & Technical Details</CardTitle>
-          <CardDescription>Explore the potential savings, system output, and data we've collected.</CardDescription>
+          <CardTitle>{appConfig.solarReport.details.title}</CardTitle>
+          <CardDescription>{appConfig.solarReport.details.description}</CardDescription>
         </CardHeader>
         <CardContent>
           <Accordion type="single" collapsible defaultValue="financials">
             <AccordionItem value="financials">
-              <AccordionTrigger className="text-lg font-semibold">Financial Summary</AccordionTrigger>
+              <AccordionTrigger className="text-lg font-semibold">{appConfig.solarReport.details.financials.title}</AccordionTrigger>
               <AccordionContent>
                 {potential.financialAnalysis ? (
                    <FinancialSummary financialAnalysis={potential.financialAnalysis} solarPotential={potential} />
                 ) : (
-                  <p className="text-muted-foreground">Financial analysis data is not available for this location.</p>
+                  <p className="text-muted-foreground">{appConfig.solarReport.details.financials.noData}</p>
                 )}
               </AccordionContent>
             </AccordionItem>
              <AccordionItem value="crm-data">
-              <AccordionTrigger className="text-lg font-semibold">CRM Integration Data</AccordionTrigger>
+              <AccordionTrigger className="text-lg font-semibold">{appConfig.solarReport.details.crm.title}</AccordionTrigger>
               <AccordionContent>
                 <CrmData result={result} addressData={addressData} />
               </AccordionContent>
@@ -102,10 +108,10 @@ export default function AnalysisDisplay({ result, addressData, onReset }: Analys
       
       <div className="text-center pt-4 space-y-4 sm:space-y-0 sm:flex sm:items-center sm:justify-center sm:gap-4">
         <Button onClick={onReset} size="lg" variant="outline">
-          <RefreshCw className="mr-2 h-4 w-4" /> Start New Analysis
+          <RefreshCw className="mr-2 h-4 w-4" /> {appConfig.solarReport.resetButton}
         </Button>
-        <Button onClick={() => router.push('/financial-details')} size="lg">
-          Continue to Financial Details <ArrowRight className="ml-2 h-4 w-4" />
+        <Button onClick={() => router.push(appConfig.solarReport.nextPath)} size="lg">
+          {appConfig.solarReport.continueButton} <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
     </div>

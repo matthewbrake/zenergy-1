@@ -1,15 +1,18 @@
 import { z } from 'zod';
 
+// Zod schema for validating the prospect information form
 export const ProspectSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
-  companyName: z.string().min(1, 'Company name is required'),
-  phone: z.string().min(10, 'Please enter a valid phone number').regex(/^\+?[0-9\s-()]+$/, 'Invalid phone number format'),
+  companyName: z.string().optional(),
+  // Regex allows for common phone number formats
+  phone: z.string().min(10, 'Please enter a valid phone number').regex(/^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/, 'Invalid phone number format'),
   email: z.string().email('Invalid email address'),
 });
 
 export type ProspectData = z.infer<typeof ProspectSchema>;
 
+// Represents the data captured from the address autocomplete component
 export interface AddressData {
   placeId: string;
   address: string;
@@ -18,6 +21,15 @@ export interface AddressData {
     lng: number;
   };
 }
+
+// Represents the data captured from the scheduling page
+export interface AppointmentData {
+  date: string; // e.g., "2024-10-26"
+  time: string; // e.g., "10:00 AM"
+}
+
+// --- SOLAR API TYPES ---
+// These types are structured to match the JSON responses from the Google Solar API.
 
 export type Money = {
   currencyCode?: string;
@@ -47,16 +59,17 @@ export type FinancialAnalysis = {
   defaultBill?: boolean;
   averageKwhPerMonth?: number;
   cashPurchaseSavings?: CashPurchaseSavings;
-  // Other financing options can be added here
+  // Other financing options can be added here if needed
 };
 
-// Directly maps to the Solar API's SolarPotential sub-object
+// Maps to the Solar API's SolarPotential sub-object from the `buildingInsights` endpoint
 export type SolarPotentialAssessmentOutput = {
   maxArrayPanelsCount?: number;
   maxSunshineHoursPerYear?: number;
   carbonOffsetFactorKgPerMwh?: number;
   yearlyEnergyDcKwh?: number;
   financialAnalysis?: FinancialAnalysis; 
+  solarPotential?: any; // To hold the full solar potential object for deeper analysis if needed
   sunshineQuantiles?: number[];
   imageryDate?: any;
   imageryProcessedDate?: any;
@@ -64,7 +77,7 @@ export type SolarPotentialAssessmentOutput = {
   panelLifetimeYears?: number;
 };
 
-// Directly maps to the Solar API's dataLayers response
+// Maps to the Solar API's `dataLayers` endpoint response
 export type VisualizeSolarDataLayersOutput = {
   rgbImageryUrl?: string;
   digitalSurfaceModelUrl?: string;
@@ -78,13 +91,13 @@ export type VisualizeSolarDataLayersOutput = {
   };
 };
 
-
+// The combined result passed to the solar report page
 export type AnalysisResult = {
   potential: SolarPotentialAssessmentOutput;
   visualization: VisualizeSolarDataLayersOutput;
 };
 
-// Types for GeoTIFF rendering
+// Helper type for GeoTIFF rendering
 export interface GeoTiffData {
   width: number;
   height: number;

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -18,16 +19,21 @@ export default function OtherServicesPage() {
 
   const handleSubmit = () => {
     const formData = { description, creditScore, interestLevel };
-    // In a real app, save to global state
+    // In a real app, save to global state or send to CRM
     console.log('Other Services Data:', formData);
-    router.push('/scheduling');
+    router.push(appConfig.otherServices.nextPath);
   };
+
+  const isFormComplete = description && creditScore && interestLevel;
 
   return (
     <main className="flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-8 bg-background">
       <div className="w-full max-w-2xl mx-auto">
-        <header className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
+        <header className="text-center mb-8 flex flex-col items-center">
+            {appConfig.global.logo && (
+              <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-12 w-auto mb-4" data-ai-hint="logo" />
+            )}
+            <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
         </header>
         <Card className="w-full shadow-lg border-2 border-primary/20">
           <CardHeader className="text-center">
@@ -71,8 +77,8 @@ export default function OtherServicesPage() {
             </div>
 
             <div className="flex justify-end pt-4">
-              <Button onClick={handleSubmit} size="lg">
-                Continue to Scheduling <ArrowRight />
+              <Button onClick={handleSubmit} size="lg" disabled={!isFormComplete}>
+                {appConfig.otherServices.submitButtonText} <ArrowRight className="ml-2" />
               </Button>
             </div>
           </CardContent>

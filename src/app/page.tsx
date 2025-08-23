@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -10,19 +11,16 @@ export default function ServiceSelectionPage() {
   const router = useRouter();
 
   const handleServiceSelect = (servicePath: string) => {
-    // In a real app, you'd store the service selection in a state management solution (Context, Redux, Zustand)
-    // For now, we'll just navigate.
-    if (servicePath === '/solar') {
-       router.push('/prospect-form');
-    } else {
-       router.push(servicePath);
-    }
+    router.push(servicePath);
   };
 
   return (
      <main className="flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-8 bg-background">
        <div className="w-full max-w-4xl mx-auto">
-         <header className="text-center mb-8">
+         <header className="text-center mb-8 flex flex-col items-center">
+            {appConfig.global.logo && (
+              <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-16 w-auto mb-4" data-ai-hint="logo" />
+            )}
             <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
             <p className="mt-2 text-lg text-muted-foreground">{appConfig.global.appDescription}</p>
         </header>
@@ -44,7 +42,7 @@ export default function ServiceSelectionPage() {
                   >
                     <service.icon className="w-8 h-8 text-primary" />
                     {service.name}
-                    {!service.enabled && <span className="text-xs font-normal">(Coming Soon)</span>}
+                    {!service.enabled && <span className="text-xs font-normal">({appConfig.serviceSelection.comingSoonText})</span>}
                   </Button>
                 ))}
               </div>
