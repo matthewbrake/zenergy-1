@@ -4,18 +4,19 @@
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ProspectSchema, type ProspectData } from '@/lib/types';
+import { ProspectSchema, type ProspectData, US_STATES } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { User, Building, Phone, Mail, Sun, Home, Wind, Thermometer } from 'lucide-react';
+import { User, Building, Phone, Mail, MapPin } from 'lucide-react';
 import { appConfig } from '@/lib/config';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 export default function ServiceSelectionPage() {
@@ -33,6 +34,9 @@ export default function ServiceSelectionPage() {
       companyName: '',
       phone: '',
       email: '',
+      address: '',
+      zipCode: '',
+      state: '',
     },
   });
 
@@ -44,7 +48,16 @@ export default function ServiceSelectionPage() {
     setSelectionError(null);
     setProspectData(data);
     setServiceChoice(selectedService.name);
-    router.push(selectedService.path);
+    
+    // For solar path, pass address components to the next page
+    if (selectedService.name === 'Solar') {
+        const query = new URLSearchParams({
+            address: `${data.address}, ${data.zipCode}`
+        }).toString();
+        router.push(`${selectedService.path}?${query}`);
+    } else {
+        router.push(selectedService.path);
+    }
   };
 
   const handleServiceSelect = (service: { name: string; path: string; }) => {
@@ -113,96 +126,18 @@ export default function ServiceSelectionPage() {
                         <FormLabel className="text-base font-semibold">{appConfig.prospectForm.step2Title}</FormLabel>
                         <div className="p-4 space-y-6 rounded-md border border-input">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField
-                                control={form.control}
-                                name="firstName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>{appConfig.prospectForm.firstNameLabel}</FormLabel>
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <FormControl>
-                                        <Input placeholder={appConfig.prospectForm.firstNamePlaceholder} {...field} className="pl-10" />
-                                        </FormControl>
-                                    </div>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                                <FormField
-                                control={form.control}
-                                name="lastName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>{appConfig.prospectForm.lastNameLabel}</FormLabel>
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <FormControl>
-                                        <Input placeholder={appConfig.prospectForm.lastNamePlaceholder} {...field} className="pl-10" />
-                                        </FormControl>
-                                    </div>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
+                                <FormField control={form.control} name="firstName" render={({ field }) => ( <FormItem> <FormLabel>{appConfig.prospectForm.firstNameLabel}</FormLabel> <div className="relative"> <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> <FormControl> <Input placeholder={appConfig.prospectForm.firstNamePlaceholder} {...field} className="pl-10" /> </FormControl> </div> <FormMessage /> </FormItem> )}/>
+                                <FormField control={form.control} name="lastName" render={({ field }) => ( <FormItem> <FormLabel>{appConfig.prospectForm.lastNameLabel}</FormLabel> <div className="relative"> <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> <FormControl> <Input placeholder={appConfig.prospectForm.lastNamePlaceholder} {...field} className="pl-10" /> </FormControl> </div> <FormMessage /> </FormItem> )}/>
                             </div>
-                            <FormField
-                                control={form.control}
-                                name="companyName"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>{appConfig.prospectForm.companyNameLabel}</FormLabel>
-                                    <div className="relative">
-                                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <FormControl>
-                                        <Input placeholder={appConfig.prospectForm.companyNamePlaceholder} {...field} className="pl-10" />
-                                    </FormControl>
-                                    </div>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
+                            <FormField control={form.control} name="companyName" render={({ field }) => ( <FormItem> <FormLabel>{appConfig.prospectForm.companyNameLabel}</FormLabel> <div className="relative"> <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> <FormControl> <Input placeholder={appConfig.prospectForm.companyNamePlaceholder} {...field} className="pl-10" /> </FormControl> </div> <FormMessage /> </FormItem> )}/>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField
-                                    control={form.control}
-                                    name="phone"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>{appConfig.prospectForm.phoneLabel}</FormLabel>
-                                            <div className="relative">
-                                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                <FormControl>
-                                                    <Input
-                                                        placeholder={appConfig.prospectForm.phonePlaceholder}
-                                                        {...field}
-                                                        onChange={(e) => {
-                                                            const formatted = formatPhoneNumber(e.target.value);
-                                                            field.onChange(formatted);
-                                                        }}
-                                                        className="pl-10"
-                                                    />
-                                                </FormControl>
-                                            </div>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                control={form.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>{appConfig.prospectForm.emailLabel}</FormLabel>
-                                    <div className="relative">
-                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <FormControl>
-                                        <Input placeholder={appConfig.prospectForm.emailPlaceholder} {...field} className="pl-10" />
-                                        </FormControl>
-                                    </div>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
+                                <FormField control={form.control} name="phone" render={({ field }) => ( <FormItem> <FormLabel>{appConfig.prospectForm.phoneLabel}</FormLabel> <div className="relative"> <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> <FormControl> <Input placeholder={appConfig.prospectForm.phonePlaceholder} {...field} onChange={(e) => { const formatted = formatPhoneNumber(e.target.value); field.onChange(formatted); }} className="pl-10" /> </FormControl> </div> <FormMessage /> </FormItem> )}/>
+                                <FormField control={form.control} name="email" render={({ field }) => ( <FormItem> <FormLabel>{appConfig.prospectForm.emailLabel}</FormLabel> <div className="relative"> <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> <FormControl> <Input placeholder={appConfig.prospectForm.emailPlaceholder} {...field} className="pl-10" /> </FormControl> </div> <FormMessage /> </FormItem> )}/>
+                            </div>
+                             <FormField control={form.control} name="address" render={({ field }) => ( <FormItem> <FormLabel>{appConfig.prospectForm.addressLabel}</FormLabel> <div className="relative"> <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> <FormControl> <Input placeholder={appConfig.prospectForm.addressPlaceholder} {...field} className="pl-10" /> </FormControl> </div> <FormMessage /> </FormItem> )}/>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField control={form.control} name="state" render={({ field }) => ( <FormItem> <FormLabel>{appConfig.prospectForm.stateLabel}</FormLabel> <Select onValueChange={field.onChange} defaultValue={field.value}> <FormControl> <SelectTrigger> <SelectValue placeholder={appConfig.prospectForm.statePlaceholder} /> </SelectTrigger> </FormControl> <SelectContent> {US_STATES.map(state => <SelectItem key={state.abbreviation} value={state.abbreviation}>{state.name}</SelectItem>)} </SelectContent> </Select> <FormMessage /> </FormItem> )}/>
+                                <FormField control={form.control} name="zipCode" render={({ field }) => ( <FormItem> <FormLabel>{appConfig.prospectForm.zipCodeLabel}</FormLabel> <FormControl> <Input placeholder={appConfig.prospectForm.zipCodePlaceholder} {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
                             </div>
                         </div>
                     </div>

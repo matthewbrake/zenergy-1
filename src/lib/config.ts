@@ -11,26 +11,22 @@
  * paths. By modifying the values in this file, you can customize the application's content and
  * behavior without altering the core React components.
  *
- * To change visual styles like colors, fonts, or spacing, please refer to:
- * - `src/app/globals.css`: For theme colors (primary, background, etc.) and global CSS variables.
- * - `tailwind.config.ts`: For Tailwind CSS utility classes and theme extensions.
- *
  * =================================================================================================
  *
  *                              APPLICATION FLOW ARCHITECTURE
  *
  * -------------------------------------------------------------------------------------------------
  *
- * UNIFIED STARTING POINT (New Flow):
+ * UNIFIED STARTING POINT:
  *
  * 1. LANDING PAGE (`/`):
  *    - User selects a service (Solar, Roofing, etc.).
- *    - User fills out their contact information (Name, Email, etc.).
+ *    - User fills out their contact information including their address.
  *    - On submission, the application routes the user based on the selected service.
  *
  * 2. POST-SUBMISSION PATHS:
  *    - SOLAR PATH:
- *      - Step 1: `/address-entry` -> User enters property address for analysis.
+ *      - Step 1: `/address-entry` -> User confirms their pre-filled address via Google Maps Autocomplete.
  *      - Step 2: `/solar-report` -> Displays API results (map, panels, savings).
  *      - Step 3: `/financial-details` -> User provides bill, credit, and interest info.
  *      - Step 4: `/scheduling` -> User books an appointment.
@@ -49,22 +45,16 @@ import { Sun, Wind, Thermometer, Home } from 'lucide-react';
 
 // =================================================================
 // 1. GLOBAL APP CONFIGURATION
-//    Settings that apply across the entire application.
 // =================================================================
 const global = {
   appName: 'Solaris Navigator',
-  displayAppName: false, // Set to `false` to hide the app name, `true` to show it.
+  displayAppName: false,
   appDescription: 'Your API-Driven Solar Sales Funnel',
-  // To change the logo, simply replace the URL below with the link to your desired image.
   logo: 'https://cdn-fnahm.nitrocdn.com/cxOvFhYadnisiFuLjcPkeAibGAFaPcTV/assets/images/optimized/rev-e0f5a65/zenergy.solar/wp-content/uploads/2022/01/Zenergy-Logo-01-1024x576.png',
-  appUrl: 'http://localhost:9002' // Base URL of the app, used for redirects.
 };
-
 
 // =================================================================
 // 2. UNIFIED START & PROSPECT PAGE (`/`)
-//    The first page the user sees. It combines service selection
-//    and prospect information capture.
 // =================================================================
 const serviceSelection = {
   title: 'Welcome!',
@@ -81,12 +71,6 @@ const serviceSelection = {
 
 const prospectForm = {
     step2Title: 'Step 2: Tell Us About Yourself',
-    // These paths are now determined on the main page based on service selection
-    nextPath: {
-      solar: '/address-entry',
-      other: '/other-services',
-    },
-    // --- Form Field Labels & Placeholders ---
     firstNameLabel: 'First Name',
     firstNamePlaceholder: 'John',
     lastNameLabel: 'Last Name',
@@ -97,38 +81,44 @@ const prospectForm = {
     phonePlaceholder: '(555) 123-4567',
     emailLabel: 'Email Address',
     emailPlaceholder: 'john.doe@acme.com',
+    addressLabel: 'Street Address',
+    addressPlaceholder: '123 Main St',
+    stateLabel: 'State',
+    statePlaceholder: 'Select your state',
+    zipCodeLabel: 'Zip Code',
+    zipCodePlaceholder: '12345',
     submitButtonText: 'Continue',
 };
 
-
 // =================================================================
-// 3. ADDRESS ENTRY PAGE (`/address-entry`)
-//    (SOLAR PATH ONLY) Where the user enters the property address.
+// 3. ADDRESS ENTRY PAGE (`/address-entry`) (SOLAR PATH ONLY)
 // =================================================================
 const addressEntry = {
-    title: 'Property Address',
-    description: 'Enter the address for the solar potential analysis.',
+    title: 'Confirm Your Property Address',
+    description: 'Select your address from the list to begin the solar analysis.',
     addressLabel: 'Address',
     placeholder: 'Enter a location',
-    instructions: 'Select an address from the dropdown to automatically start the analysis.',
+    instructions: 'Confirming your address ensures we analyze the correct rooftop for solar potential.',
     apiKeyMissingError: 'Google Maps API key is missing. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.',
     nextPath: '/solar-report',
 };
 
-
 // =================================================================
-// 4. SOLAR REPORT PAGE (`/solar-report`)
-//    (SOLAR PATH ONLY) Displays the results of the solar analysis.
+// 4. SOLAR REPORT PAGE (`/solar-report`) (SOLAR PATH ONLY)
 // =================================================================
 const solarReport = {
-    loadingTitle: 'Analyzing Solar Potential',
-    loadingDescription: (address: string) => `This may take a moment. We're gathering satellite imagery and solar data for ${address}.`,
+    loading: {
+      title: "Analyzing Solar Potential",
+      initial: "Initializing analysis...",
+      fetching: (address: string) => `Gathering satellite imagery and solar data for ${address}...`,
+      rendering: "Rendering visualization and financial data...",
+    },
     errorTitle: 'Analysis Failed',
     noAddressTitle: 'No Address Found',
     noAddressDescription: 'Please return to the previous page to enter an address for analysis.',
     reportTitle: 'Your Personalized Solar Report',
     nextPath: '/financial-details',
-    retryButton: 'Try Again',
+    retryButton: 'Try a Different Address',
     goBackButton: 'Go Back',
     resetButton: 'Start New Analysis',
     continueButton: 'Continue to Next Steps',
@@ -152,36 +142,28 @@ const solarReport = {
     }
 };
 
-
 // =================================================================
-// 5. OTHER SERVICES PAGE (`/other-services`)
-//    (NON-SOLAR PATHS) A generic form for non-solar service requests.
+// 5. OTHER SERVICES PAGE (`/other-services`) (NON-SOLAR PATHS)
 // =================================================================
 const otherServices = {
     title: 'Tell Us More',
     description: 'Please provide a few more details so we can better assist you.',
-    nextPath: '/financial-details', // After this, user goes to the same financial page
+    nextPath: '/financial-details',
     needsLabel: 'Please describe your needs',
     needsPlaceholder: 'Example: "I need to replace my roof due to storm damage." or "My AC unit is not cooling properly."',
     submitButtonText: 'Continue'
 };
 
-
 // =================================================================
-// 6. FINANCIAL DETAILS PAGE (`/financial-details`)
-//    (ALL PATHS) Gathers bill info (solar only), credit score, and
-//    interest level.
+// 6. FINANCIAL DETAILS PAGE (`/financial-details`) (ALL PATHS)
 // =================================================================
 const financialDetails = {
     title: 'Final Steps',
     description: 'Just a few more details to help us prepare for your consultation.',
     nextPath: '/scheduling',
-    // --- Bill Slider (Solar Only) ---
     monthlyBillLabel: 'Average Monthly Electric Bill',
-    // --- Bill Upload ---
     billUploadTitle: "Want a More Accurate Quote? (Feature Disabled)",
-    billUploadDescription: "To enable file uploads, upgrade to a paid Formspree plan and re-enable this feature in the code.",
-    // --- Credit Score & Interest Level (All Paths) ---
+    billUploadDescription: "To enable file uploads, please upgrade your Formspree plan.",
     creditScoreLabel: 'What is your approximate credit score?',
     creditScoreOptions: [
         { value: 'excellent', label: 'Excellent', range: '720+' },
@@ -198,25 +180,21 @@ const financialDetails = {
     submitButtonText: 'Continue to Scheduling',
 };
 
-
 // =================================================================
-// 7. SCHEDULING PAGE (`/scheduling`)
-//    (ALL PATHS) Where the user books an appointment.
+// 7. SCHEDULING PAGE (`/scheduling`) (ALL PATHS)
 // =================================================================
 const scheduling = {
     title: 'Schedule Your Consultation',
     description: 'Choose a date and time that works best for you.',
     nextPath: '/confirmation',
-    bookingWindowDays: 60, // How many days into the future the user can book.
+    bookingWindowDays: 60,
     availableTimesLabel: 'Available Times for',
     availableTimes: ['08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'],
     submitButtonText: 'Confirm Appointment',
 };
 
-
 // =================================================================
-// 8. CONFIRMATION PAGE (`/confirmation`)
-//    (ALL PATHS) The final page summarizing the user's submission.
+// 8. CONFIRMATION PAGE (`/confirmation`) (ALL PATHS)
 // =================================================================
 const confirmation = {
     title: 'Appointment Confirmed!',
@@ -232,7 +210,6 @@ const confirmation = {
     emailSuccessTitle: 'Email Sent',
     emailSuccessDescription: 'A copy of your summary has been sent to your email address.',
 };
-
 
 // =================================================================
 // EXPORT THE CONFIGURATION

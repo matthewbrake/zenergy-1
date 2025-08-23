@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, ArrowRight, UploadCloud } from 'lucide-react';
+import { ArrowRight, UploadCloud } from 'lucide-react';
 import { appConfig } from '@/lib/config';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { cn } from '@/lib/utils';
@@ -25,7 +25,7 @@ export default function FinancialDetailsPage() {
   const [creditScore, setCreditScore] = useState('');
   const [interestLevel, setInterestLevel] = useState('');
 
-  const isSolarPath = !serviceChoice; // If no service choice, it's the default solar path
+  const isSolarPath = serviceChoice === 'Solar';
   const isFormComplete = creditScore && interestLevel;
 
 
@@ -34,7 +34,7 @@ export default function FinancialDetailsPage() {
     
     // In a real app, you'd combine this data with other stored data
     // and send to a CRM. For this demo, we store it and proceed.
-    if(otherServicesData) {
+    if(otherServicesData && !isSolarPath) {
         setOtherServicesData({ ...otherServicesData, creditScore, interestLevel });
     }
 
@@ -151,4 +151,3 @@ export default function FinancialDetailsPage() {
     </main>
   );
 }
-
