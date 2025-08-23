@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { appConfig } from '@/lib/config';
-import { CheckCircle, Mail, Printer, RotateCcw } from 'lucide-react';
+import { CheckCircle, Mail, Printer, RotateCcw, Home, Sun } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/use-local-storage';
 
@@ -15,6 +15,8 @@ export default function ConfirmationPage() {
   const [prospectData] = useLocalStorage('prospectData', null);
   const [addressData] = useLocalStorage('addressData', null);
   const [appointmentData] = useLocalStorage('appointmentData', null);
+  const [otherServicesData] = useLocalStorage('otherServicesData', null);
+  const [serviceChoice] = useLocalStorage('serviceChoice', null);
 
 
   const handlePrint = () => {
@@ -31,12 +33,37 @@ export default function ConfirmationPage() {
   
   const startOver = () => {
     // Clear all persistent data
-    localStorage.removeItem('prospectData');
-    localStorage.removeItem('addressData');
-    localStorage.removeItem('appointmentData');
-    localStorage.removeItem('financialData');
+    localStorage.clear();
     router.push('/');
   };
+
+  const renderServiceSpecificDetails = () => {
+    // If 'otherServicesData' exists, it means the user came from the HVAC/Roofing/Smart Home flow.
+    if (otherServicesData && serviceChoice) {
+      return (
+        <>
+            <div className="flex items-center justify-center gap-2">
+                <Home className="w-6 h-6 text-primary" />
+                <h3 className="font-semibold text-lg">{serviceChoice} Service Details</h3>
+            </div>
+            <p><strong>Needs:</strong> {otherServicesData.description}</p>
+            <p><strong>Credit Score:</strong> {appConfig.otherServices.creditScoreOptions.find(o => o.value === otherServicesData.creditScore)?.label}</p>
+            <p><strong>Interest Level:</strong> {appConfig.otherServices.interestLevelOptions.find(o => o.value === otherServicesData.interestLevel)?.label}</p>
+        </>
+      )
+    }
+
+    // Otherwise, show solar details.
+    return (
+       <>
+            <div className="flex items-center justify-center gap-2">
+                <Sun className="w-6 h-6 text-primary" />
+                <h3 className="font-semibold text-lg">Solar Analysis Details</h3>
+            </div>
+            {addressData && <p><strong>{appConfig.confirmation.summaryAddressLabel}:</strong> {addressData.address}</p>}
+       </>
+    )
+  }
 
   return (
     <main className="flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-8 bg-background">
@@ -54,11 +81,33 @@ export default function ConfirmationPage() {
           </CardHeader>
           <CardContent className="text-center space-y-6">
             
-            <div className="p-6 rounded-lg bg-muted/50 border text-left space-y-2">
-                <h3 className="font-semibold mb-4 text-lg">{appConfig.confirmation.summaryTitle}</h3>
-                {prospectData && <p><strong>{appConfig.confirmation.summaryNameLabel}:</strong> {prospectData.firstName} {prospectData.lastName}</p>}
-                {addressData && <p><strong>{appConfig.confirmation.summaryAddressLabel}:</strong> {addressData.address}</p>}
-                {appointmentData && <p><strong>{appConfig.confirmation.summaryAppointmentLabel}:</strong> {appointmentData.date} at {appointmentData.time}</p>}
+            <div className="p-6 rounded-lg bg-muted/50 border text-left space-y-3">
+                <h3 className="font-semibold mb-4 text-lg text-center">{appConfig.confirmation.summaryTitle}</h3>
+                
+                {/* Prospect Details */}
+                {prospectData && (
+                    <div className="space-y-1">
+                        <p><strong>{appConfig.confirmation.summaryNameLabel}:</strong> {prospectData.firstName} {prospectData.lastName}</p>
+                        <p><strong>Email:</strong> {prospectData.email}</p>
+                        <p><strong>Phone:</strong> {prospectData.phone}</p>
+                    </div>
+                )}
+                
+                <hr className="my-4 border-dashed" />
+
+                {/* Service Specific Details */}
+                <div className="space-y-1 text-center">
+                   {renderServiceSpecificDetails()}
+                </div>
+                
+                <hr className="my-4 border-dashed" />
+
+                {/* Appointment Details */}
+                {appointmentData && (
+                    <div className="space-y-1 text-center">
+                        <p><strong>{appConfig.confirmation.summaryAppointmentLabel}:</strong> {appointmentData.date} at {appointmentData.time}</p>
+                    </div>
+                )}
             </div>
 
             <p className="text-muted-foreground">{appConfig.confirmation.nextSteps}</p>

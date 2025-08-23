@@ -2,7 +2,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ProspectSchema, type ProspectData } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import useLocalStorage from '@/hooks/use-local-storage';
 export default function ProspectFormPage() {
     const router = useRouter();
     const [, setProspectData] = useLocalStorage('prospectData', null);
+    const [serviceChoice] = useLocalStorage('serviceChoice', null);
     
     const form = useForm<ProspectData>({
         resolver: zodResolver(ProspectSchema),
@@ -31,7 +32,10 @@ export default function ProspectFormPage() {
 
     const onSubmit = (data: ProspectData) => {
         setProspectData(data);
-        router.push(appConfig.prospectForm.nextPath);
+        // If a service choice was made (e.g., Roofing), go to the other services page.
+        // Otherwise, follow the default solar path.
+        const nextPath = serviceChoice ? '/other-services' : appConfig.prospectForm.nextPath;
+        router.push(nextPath);
     };
 
     const formatPhoneNumber = (value: string) => {

@@ -10,17 +10,19 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { appConfig } from '@/lib/config';
 import { ArrowRight } from 'lucide-react';
+import useLocalStorage from '@/hooks/use-local-storage';
 
 export default function OtherServicesPage() {
   const router = useRouter();
   const [description, setDescription] = useState('');
   const [creditScore, setCreditScore] = useState('');
   const [interestLevel, setInterestLevel] = useState('');
+  const [, setOtherServicesData] = useLocalStorage('otherServicesData', null);
+
 
   const handleSubmit = () => {
     const formData = { description, creditScore, interestLevel };
-    // In a real app, save to global state or send to CRM
-    console.log('Other Services Data:', formData);
+    setOtherServicesData(formData);
     router.push(appConfig.otherServices.nextPath);
   };
 

@@ -6,12 +6,21 @@ import { CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { appConfig } from '@/lib/config';
+import useLocalStorage from '@/hooks/use-local-storage';
 
 export default function ServiceSelectionPage() {
   const router = useRouter();
+  const [, setServiceChoice] = useLocalStorage('serviceChoice', null);
 
-  const handleServiceSelect = (servicePath: string) => {
-    router.push(servicePath);
+  const handleServiceSelect = (service: { name: string; path: string; }) => {
+    // For non-solar services, store the choice and go to prospect form first
+    if (service.path === '/other-services') {
+        setServiceChoice(service.name);
+        router.push('/prospect-form');
+    } else {
+        // For solar, go directly to its path which is already the prospect form
+        router.push(service.path);
+    }
   };
 
   return (
@@ -36,7 +45,7 @@ export default function ServiceSelectionPage() {
                     key={service.name}
                     variant="outline"
                     className="h-28 flex flex-col gap-2 border-2 text-base font-semibold hover:border-primary hover:bg-primary/10 data-[enabled=false]:opacity-50 data-[enabled=false]:pointer-events-none"
-                    onClick={() => handleServiceSelect(service.path)}
+                    onClick={() => handleServiceSelect(service)}
                     data-enabled={service.enabled}
                     disabled={!service.enabled}
                   >
