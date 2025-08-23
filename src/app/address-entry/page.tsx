@@ -199,7 +199,7 @@ export default function AddressEntryPage() {
 
     const handleAddressSubmit = async (data: AddressData) => {
         setAddressData(data); // Save address to local storage via custom hook
-        router.push('/solar-report');
+        router.push(appConfig.addressEntry.nextPath);
     };
 
   return (

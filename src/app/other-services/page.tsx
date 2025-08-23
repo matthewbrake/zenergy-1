@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { appConfig } from '@/lib/config';
 import { ArrowRight } from 'lucide-react';
 import useLocalStorage from '@/hooks/use-local-storage';
@@ -15,18 +14,16 @@ import useLocalStorage from '@/hooks/use-local-storage';
 export default function OtherServicesPage() {
   const router = useRouter();
   const [description, setDescription] = useState('');
-  const [creditScore, setCreditScore] = useState('');
-  const [interestLevel, setInterestLevel] = useState('');
-  const [, setOtherServicesData] = useLocalStorage('otherServicesData', null);
+  const [, setOtherServicesData] = useLocalStorage('otherServicesData', { description: '' });
 
 
   const handleSubmit = () => {
-    const formData = { description, creditScore, interestLevel };
+    const formData = { description };
     setOtherServicesData(formData);
     router.push(appConfig.otherServices.nextPath);
   };
 
-  const isFormComplete = description && creditScore && interestLevel;
+  const isFormComplete = description;
 
   return (
     <main className="flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-8 bg-background">
@@ -54,30 +51,6 @@ export default function OtherServicesPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 className="min-h-[120px]"
               />
-            </div>
-
-            <div className="space-y-4">
-              <Label>{appConfig.otherServices.creditScoreLabel}</Label>
-              <RadioGroup value={creditScore} onValueChange={setCreditScore} className="flex flex-col sm:flex-row gap-4">
-                {appConfig.otherServices.creditScoreOptions.map((option) => (
-                  <div key={option.value} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.value} id={`credit-${option.value}`} />
-                    <Label htmlFor={`credit-${option.value}`} className="font-normal">{option.label}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-            
-            <div className="space-y-4">
-              <Label>{appConfig.otherServices.interestLevelLabel}</Label>
-               <RadioGroup value={interestLevel} onValueChange={setInterestLevel} className="flex flex-col sm:flex-row gap-4">
-                {appConfig.otherServices.interestLevelOptions.map((option) => (
-                  <div key={option.value} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option.value} id={`interest-${option.value}`} />
-                    <Label htmlFor={`interest-${option.value}`} className="font-normal">{option.label}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
             </div>
 
             <div className="flex justify-end pt-4">

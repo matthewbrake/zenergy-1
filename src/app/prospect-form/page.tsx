@@ -33,8 +33,8 @@ export default function ProspectFormPage() {
     const onSubmit = (data: ProspectData) => {
         setProspectData(data);
         // If a service choice was made (e.g., Roofing), go to the other services page.
-        // Otherwise, follow the default solar path.
-        const nextPath = serviceChoice ? '/other-services' : appConfig.prospectForm.nextPath;
+        // Otherwise, it's the solar path, so go to address entry.
+        const nextPath = serviceChoice ? appConfig.prospectForm.nextPath.other : appConfig.prospectForm.nextPath.solar;
         router.push(nextPath);
     };
 

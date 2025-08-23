@@ -47,6 +47,8 @@ export default function SolarReportPage() {
 
   const handleReset = () => {
     localStorage.removeItem('addressData');
+    localStorage.removeItem('prospectData');
+    localStorage.removeItem('serviceChoice');
     router.push('/');
   };
 
