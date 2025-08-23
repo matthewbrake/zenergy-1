@@ -41,7 +41,9 @@ export default function SchedulingPage() {
             {appConfig.global.logo && (
               <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-12 w-auto mb-4" data-ai-hint="logo" />
             )}
-            <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
+            {appConfig.global.displayAppName && (
+              <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
+            )}
         </header>
         <Card className="w-full shadow-lg border-2 border-primary/20">
           <CardHeader className="text-center">

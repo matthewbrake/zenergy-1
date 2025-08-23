@@ -4,53 +4,88 @@
 
 @layer base {
   :root {
-    --background: 206 92% 94%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 206 92% 94%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 206 92% 94%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221 100% 58%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 187 100% 50%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221 100% 58%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    /* 
+      ==========================================================================
+      CORE THEME - LIGHT MODE (Currently unused, but here for future use)
+      ==========================================================================
+      --background: 206 92% 94%;
+      --foreground: 222.2 84% 4.9%;
+      --card: 206 92% 94%;
+      --card-foreground: 222.2 84% 4.9%;
+      --popover: 206 92% 94%;
+      --popover-foreground: 222.2 84% 4.9%;
+      --primary: 221 100% 58%;
+      --primary-foreground: 210 40% 98%;
+      --secondary: 210 40% 96.1%;
+      --secondary-foreground: 222.2 47.4% 11.2%;
+      --muted: 210 40% 96.1%;
+      --muted-foreground: 215.4 16.3% 46.9%;
+      --accent: 187 100% 50%;
+      --accent-foreground: 222.2 47.4% 11.2%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 210 40% 98%;
+      --border: 214.3 31.8% 91.4%;
+      --input: 214.3 31.8% 91.4%;
+      --ring: 221 100% 58%;
+      --radius: 0.5rem;
+    */
   }
 
-  .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
+  /* 
+    ==========================================================================
+    DARK MODE THEME (Currently Active)
+    This is where you can easily customize the application's color scheme.
+    Colors are defined using HSL (Hue, Saturation, Lightness) values.
+    ==========================================================================
+  */
+  .dark,
+  :root {
+    /* App Background Color */
+    --background: 222 47% 6%; /* A very dark blue, near black */
+    /* Default Text (Foreground) Color */
+    --foreground: 210 40% 98%; /* Almost white, for high contrast */
+    
+    /* Card Background Color (for sections, forms, etc.) */
+    --card: 222 47% 11%; /* A slightly lighter dark blue */
+    /* Text Color Inside Cards */
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    
+    /* Popover Background & Text (for dropdowns, etc.) */
+    --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
+    
+    /* Primary Button & Element Color */
+    --primary: 217 91% 60%; /* A bright, vibrant blue */
+    /* Text Color on Primary Buttons */
     --primary-foreground: 222.2 47.4% 11.2%;
+    
+    /* Secondary Button & Element Color */
     --secondary: 217.2 32.6% 17.5%;
+    /* Text Color on Secondary Buttons */
     --secondary-foreground: 210 40% 98%;
+    
+    /* Muted Text & Element Color (for descriptions, etc.) */
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 187 100% 50%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 62.8% 30.6%;
+    --muted-foreground: 215.4 16.3% 55%;
+    
+    /* Accent Color (for highlights, special buttons, etc.) */
+    --accent: 173 95% 42%; /* A vibrant green/cyan */
+    --accent-foreground: 210 40% 98%;
+    
+    /* Destructive/Error Color */
+    --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    
+    /* Border & Input Field Colors */
+    --border: 217.2 32.6% 25%;
+    --input: 217.2 32.6% 25%;
+    /* Ring Color (for focus states) */
     --ring: 217 91% 60%;
+
+    /* Corner Radius for elements like cards and buttons */
+    --radius: 0.5rem;
+
+    /* Chart Colors */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;

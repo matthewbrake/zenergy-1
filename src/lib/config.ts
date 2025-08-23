@@ -25,8 +25,10 @@ import { Sun, Wind, Thermometer, Home } from 'lucide-react';
 // =================================================================
 const global = {
   appName: 'Solaris Navigator',
+  displayAppName: false, // Set to `false` to hide the app name, `true` to show it.
   appDescription: 'Your API-Driven Solar Sales Funnel',
-  logo: '/logo.svg', // Path to your logo file in the /public directory. Leave as null to disable.
+  // To change the logo, simply replace the URL below with the link to your desired image.
+  logo: 'https://cdn-fnahm.nitrocdn.com/cxOvFhYadnisiFuLjcPkeAibGAFaPcTV/assets/images/optimized/rev-e0f5a65/zenergy.solar/wp-content/uploads/2022/01/Zenergy-Logo-01-1024x576.png',
   appUrl: 'http://localhost:9002' // Base URL of the app, used for redirects.
 };
 

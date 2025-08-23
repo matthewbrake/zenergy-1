@@ -96,7 +96,9 @@ export default function SolarReportPage() {
             {appConfig.global.logo && (
               <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-12 w-auto mb-4" data-ai-hint="logo" />
             )}
-            <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
+            {appConfig.global.displayAppName && (
+                <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
+            )}
             <p className="mt-2 text-lg text-muted-foreground">{appConfig.global.appDescription}</p>
         </header>
         <Card className="w-full shadow-lg border-2 border-primary/20">

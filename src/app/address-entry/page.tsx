@@ -209,7 +209,9 @@ export default function AddressEntryPage() {
             {appConfig.global.logo && (
               <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-12 w-auto mb-4" data-ai-hint="logo" />
             )}
-            <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
+            {appConfig.global.displayAppName && (
+              <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
+            )}
         </header>
         <Card className="w-full shadow-lg border-2 border-primary/20">
           <CardContent className="p-4 sm:p-8">
