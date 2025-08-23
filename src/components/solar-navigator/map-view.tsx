@@ -74,47 +74,6 @@ const loadGoogleMapsScript = () => {
   return googleMapsScriptLoadingPromise;
 };
 
-// --- Custom Canvas Overlay ---
-class CanvasOverlay extends google.maps.OverlayView {
-    private canvas: HTMLCanvasElement;
-    private bounds: google.maps.LatLngBounds;
-    private div?: HTMLDivElement;
-
-    constructor(canvas: HTMLCanvasElement, bounds: google.maps.LatLngBounds) {
-        super();
-        this.canvas = canvas;
-        this.bounds = bounds;
-    }
-
-    onAdd() {
-        this.div = document.createElement('div');
-        this.div.style.borderStyle = 'none';
-        this.div.style.borderWidth = '0px';
-        this.div.style.position = 'absolute';
-        this.div.appendChild(this.canvas);
-        const panes = this.getPanes();
-        panes?.overlayLayer.appendChild(this.div);
-    }
-
-    draw() {
-        const overlayProjection = this.getProjection();
-        if (!overlayProjection || !this.div) return;
-        const sw = overlayProjection.fromLatLngToDivPixel(this.bounds.getSouthWest())!;
-        const ne = overlayProjection.fromLatLngToDivPixel(this.bounds.getNorthEast())!;
-        this.div.style.left = `${sw.x}px`;
-        this.div.style.top = `${ne.y}px`;
-        this.div.style.width = `${ne.x - sw.x}px`;
-        this.div.style.height = `${sw.y - ne.y}px`;
-    }
-
-    onRemove() {
-        if (this.div) {
-            this.div.parentNode?.removeChild(this.div);
-            delete this.div;
-        }
-    }
-}
-
 export default function MapView({ location, visualizationData }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -122,6 +81,54 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Loading Map...');
   const [layers, setLayers] = useState<LayerState[]>([]);
+
+  // --- Custom Canvas Overlay (Defined inside the component) ---
+  const CanvasOverlay = React.useMemo(() => {
+    // This class is only defined once the API is loaded, preventing "google is not defined" error.
+    if (!isApiLoaded) return null;
+    
+    class CanvasOverlay extends google.maps.OverlayView {
+        private canvas: HTMLCanvasElement;
+        private bounds: google.maps.LatLngBounds;
+        private div?: HTMLDivElement;
+
+        constructor(canvas: HTMLCanvasElement, bounds: google.maps.LatLngBounds) {
+            super();
+            this.canvas = canvas;
+            this.bounds = bounds;
+        }
+
+        onAdd() {
+            this.div = document.createElement('div');
+            this.div.style.borderStyle = 'none';
+            this.div.style.borderWidth = '0px';
+            this.div.style.position = 'absolute';
+            this.div.appendChild(this.canvas);
+            const panes = this.getPanes();
+            panes?.overlayLayer.appendChild(this.div);
+        }
+
+        draw() {
+            const overlayProjection = this.getProjection();
+            if (!overlayProjection || !this.div) return;
+            const sw = overlayProjection.fromLatLngToDivPixel(this.bounds.getSouthWest())!;
+            const ne = overlayProjection.fromLatLngToDivPixel(this.bounds.getNorthEast())!;
+            this.div.style.left = `${sw.x}px`;
+            this.div.style.top = `${ne.y}px`;
+            this.div.style.width = `${ne.x - sw.x}px`;
+            this.div.style.height = `${sw.y - ne.y}px`;
+        }
+
+        onRemove() {
+            if (this.div) {
+                this.div.parentNode?.removeChild(this.div);
+                delete this.div;
+            }
+        }
+    }
+    return CanvasOverlay;
+  }, [isApiLoaded]);
+
 
   // Effect to load the Google Maps script
   useEffect(() => {
@@ -185,7 +192,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
 
   // Main effect to manage rendering and removing layer overlays
   useEffect(() => {
-    if (!map || !visualizationData?.boundingBox) return;
+    if (!map || !visualizationData?.boundingBox || !CanvasOverlay) return;
   
     const { sw, ne } = visualizationData.boundingBox;
     const bounds = new google.maps.LatLngBounds(
@@ -247,7 +254,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layers, map, visualizationData]);
+  }, [layers, map, visualizationData, CanvasOverlay]);
   
   if (!API_KEY) {
     return (
@@ -310,5 +317,3 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     </div>
   );
 }
-
-    
