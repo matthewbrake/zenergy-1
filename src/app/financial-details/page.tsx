@@ -68,10 +68,7 @@ export default function FinancialDetailsPage() {
        <div className="w-full max-w-2xl mx-auto">
         <header className="text-center mb-8 flex flex-col items-center">
             {appConfig.global.logo && (
-              <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-16 w-auto mb-4" data-ai-hint="logo" />
-            )}
-            {appConfig.global.displayAppName && (
-              <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
+              <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-20 w-auto mb-4" data-ai-hint="logo" />
             )}
         </header>
         <Card className="w-full shadow-lg border-2 border-primary/20">

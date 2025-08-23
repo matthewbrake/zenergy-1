@@ -11,6 +11,15 @@
  * paths. By modifying the values in this file, you can customize the application's content and
  * behavior without altering the core React components.
  *
+ * WHY NOT .env?
+ * For values that are NOT secrets and are needed by the browser (like UI text, logos, or public
+ * settings), this file is often a better choice than environment variables. It allows for typed,
+ * structured configuration that is easily imported and used throughout the client-side code
+ * without special prefixes (like NEXT_PUBLIC_).
+ *
+ * For SECRET keys (like the Google Maps API Key used in server-side actions), environment
+ * variables are the correct choice.
+ *
  * =================================================================================================
  *
  *                              APPLICATION FLOW ARCHITECTURE
@@ -48,7 +57,6 @@ import { Sun, Wind, Thermometer, Home } from 'lucide-react';
 // =================================================================
 const global = {
   appName: 'Solaris Navigator',
-  displayAppName: false,
   appDescription: 'Your API-Driven Solar Sales Funnel',
   logo: 'https://cdn-fnahm.nitrocdn.com/cxOvFhYadnisiFuLjcPkeAibGAFaPcTV/assets/images/optimized/rev-e0f5a65/zenergy.solar/wp-content/uploads/2022/01/Zenergy-Logo-01-1024x576.png',
 };

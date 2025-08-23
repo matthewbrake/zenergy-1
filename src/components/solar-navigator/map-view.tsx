@@ -29,12 +29,12 @@ interface LayerState {
     label: string;
     active: boolean;
     disabled: boolean;
+    overlay?: google.maps.OverlayView | null;
 }
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 // --- Map Script Loader ---
-// This ensures the Google Maps script is loaded only once.
 let googleMapsScriptLoadingPromise: Promise<void> | null = null;
 const loadGoogleMapsScript = () => {
   if (googleMapsScriptLoadingPromise) {
@@ -75,7 +75,6 @@ const loadGoogleMapsScript = () => {
 };
 
 // --- Custom Canvas Overlay ---
-// This class is responsible for placing the rendered GeoTIFF canvas onto the map.
 class CanvasOverlay extends google.maps.OverlayView {
     private canvas: HTMLCanvasElement;
     private bounds: google.maps.LatLngBounds;
@@ -94,9 +93,7 @@ class CanvasOverlay extends google.maps.OverlayView {
         this.div.style.position = 'absolute';
         this.div.appendChild(this.canvas);
         const panes = this.getPanes();
-        if (panes) {
-            panes.overlayLayer.appendChild(this.div);
-        }
+        panes?.overlayLayer.appendChild(this.div);
     }
 
     draw() {
@@ -104,23 +101,17 @@ class CanvasOverlay extends google.maps.OverlayView {
         if (!overlayProjection || !this.div) return;
         const sw = overlayProjection.fromLatLngToDivPixel(this.bounds.getSouthWest())!;
         const ne = overlayProjection.fromLatLngToDivPixel(this.bounds.getNorthEast())!;
-        if (sw && ne) {
-            this.div.style.left = `${sw.x}px`;
-            this.div.style.top = `${ne.y}px`;
-            this.div.style.width = `${ne.x - sw.x}px`;
-            this.div.style.height = `${sw.y - ne.y}px`;
-        }
+        this.div.style.left = `${sw.x}px`;
+        this.div.style.top = `${ne.y}px`;
+        this.div.style.width = `${ne.x - sw.x}px`;
+        this.div.style.height = `${sw.y - ne.y}px`;
     }
 
     onRemove() {
-        if (this.div && this.div.parentNode) {
-            (this.div.parentNode as HTMLElement).removeChild(this.div);
+        if (this.div) {
+            this.div.parentNode?.removeChild(this.div);
             delete this.div;
         }
-    }
-    
-    setMap(map: google.maps.Map | null) {
-        super.setMap(map);
     }
 }
 
@@ -131,21 +122,18 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [loadingMessage, setLoadingMessage] = useState('Loading Map...');
   const [layers, setLayers] = useState<LayerState[]>([]);
-  
-  // Use a ref to store overlays to avoid re-renders and manage their state.
-  const overlaysRef = useRef<Map<LayerType, CanvasOverlay>>(new Map());
 
-  // Effect to load the Google Maps script on component mount.
+  // Effect to load the Google Maps script
   useEffect(() => {
     loadGoogleMapsScript()
       .then(() => setIsApiLoaded(true))
       .catch((err) => {
-        console.error("MapView script loading error:", err)
+        console.error("MapView script loading error:", err);
         setError("Mapping service could not be loaded.");
       });
   }, []);
   
-  // Effect to initialize the layer state once visualization data is available.
+  // Initialize layers once visualization data is available
   useEffect(() => {
     if (visualizationData) {
       setLayers([
@@ -157,7 +145,7 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
     }
   }, [visualizationData]);
 
-  // Effect to initialize the map itself once the API is loaded.
+  // Initialize the map
   useEffect(() => {
     if (isApiLoaded && mapRef.current && !map) {
       setLoadingMessage("Initializing map...");
@@ -169,26 +157,29 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
         zoomControl: true,
         tilt: 0,
       });
-      setMap(mapInstance);
-      setLoadingMessage('');
       
-      // Add a marker for the specified location.
-      new window.google.maps.marker.AdvancedMarkerElement({
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
         position: location,
         map: mapInstance,
+      });
+
+      // It's crucial to wait for the map to be idle before we declare it "ready"
+      google.maps.event.addListenerOnce(mapInstance, 'idle', () => {
+          setMap(mapInstance);
+          setLoadingMessage('');
       });
     }
   }, [isApiLoaded, location, map]);
 
-  const toggleLayer = useCallback((layerId: LayerType) => {
-    setLayers(prevLayers =>
-        prevLayers.map(layer =>
-            layer.id === layerId ? { ...layer, active: !layer.active } : layer
-        )
-    );
+  const toggleLayer = useCallback(async (layerId: LayerType) => {
+      setLayers(currentLayers => 
+          currentLayers.map(layer => 
+              layer.id === layerId ? { ...layer, active: !layer.active } : layer
+          )
+      );
   }, []);
 
-  // Main effect to manage rendering and removing layer overlays based on state.
+  // Main effect to manage rendering and removing layer overlays
   useEffect(() => {
     if (!map || !visualizationData?.boundingBox) return;
   
@@ -198,11 +189,9 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
       new google.maps.LatLng(ne.latitude, ne.longitude)
     );
   
-    layers.forEach(async (layer) => {
-      const existingOverlay = overlaysRef.current.get(layer.id);
-
-      // If layer should be active but there's no overlay, create it.
-      if (layer.active && !existingOverlay) {
+    layers.forEach(async (layer, index) => {
+      // If layer should be active but has no overlay, create it.
+      if (layer.active && !layer.overlay) {
         if (!layer.url) {
           console.warn(`No URL for layer: ${layer.label}`);
           return;
@@ -210,31 +199,38 @@ export default function MapView({ location, visualizationData }: MapViewProps) {
   
         setLoadingMessage(`Rendering ${layer.label}...`);
         try {
-          // The renderGeoTiff function does the heavy lifting of fetching and drawing the image.
           const canvas = await renderGeoTiff(layer.url, API_KEY!, layer.id);
           if (canvas && map) { // Check if map is still mounted
-            const overlay = new CanvasOverlay(canvas, bounds);
-            overlaysRef.current.set(layer.id, overlay);
-            overlay.setMap(map);
+            const newOverlay = new CanvasOverlay(canvas, bounds);
+            newOverlay.setMap(map);
+            // Update the state with the created overlay
+            setLayers(currentLayers => {
+              const newLayers = [...currentLayers];
+              newLayers[index].overlay = newOverlay;
+              return newLayers;
+            });
           } else {
              throw new Error('GeoTIFF rendering returned null or map was unmounted.');
           }
         } catch (err: any) {
           setError(`Could not display ${layer.label} overlay: ${err.message}`);
-          // Deactivate layer on error to prevent trying again.
-          setLayers(prev => prev.map(l => l.id === layer.id ? {...l, active: false} : l));
+          toggleLayer(layer.id); // Deactivate layer on error
         } finally {
           setLoadingMessage('');
         }
       } 
-      // If layer should be inactive but there's an overlay, remove it.
-      else if (!layer.active && existingOverlay) {
-        existingOverlay.setMap(null);
-        overlaysRef.current.delete(layer.id);
+      // If layer should be inactive but has an overlay, remove it.
+      else if (!layer.active && layer.overlay) {
+        layer.overlay.setMap(null);
+        // Update the state to remove the overlay
+        setLayers(currentLayers => {
+            const newLayers = [...currentLayers];
+            newLayers[index].overlay = null;
+            return newLayers;
+        });
       }
     });
-  // This effect depends on the layers' active state and the map instance.
-  }, [layers, map, visualizationData, API_KEY]);
+  }, [layers, map, visualizationData, API_KEY, toggleLayer]);
   
   if (!API_KEY) {
     return (

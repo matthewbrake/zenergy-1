@@ -9,6 +9,7 @@ import { CheckCircle, Mail, Printer, RotateCcw, Home, Sun } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { useEffect, useState } from 'react';
+import type { AnalysisResult } from '@/lib/types';
 
 export default function ConfirmationPage() {
   const router = useRouter();
@@ -18,7 +19,8 @@ export default function ConfirmationPage() {
   const [appointmentData] = useLocalStorage('appointmentData', null);
   const [otherServicesData] = useLocalStorage('otherServicesData', null);
   const [serviceChoice] = useLocalStorage('serviceChoice', null);
-  const [financialData] = useLocalStorage('financialData', null); // Added to gather all data
+  const [financialData] = useLocalStorage('financialData', null);
+  const [analysisResult] = useLocalStorage<AnalysisResult | null>('analysisResult', null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,6 +40,7 @@ export default function ConfirmationPage() {
         financials: financialData,
         appointment: appointmentData,
         otherServiceNeeds: otherServicesData,
+        solarAnalysis: serviceChoice === 'Solar' && analysisResult ? analysisResult : undefined,
       };
 
       try {
@@ -46,7 +49,7 @@ export default function ConfirmationPage() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(finalSubmissionData),
+          body: JSON.stringify(finalSubmissionData, null, 2),
         });
 
         if (response.ok) {
@@ -139,11 +142,8 @@ export default function ConfirmationPage() {
       <div className="w-full max-w-2xl mx-auto">
         <header className="text-center mb-8 flex flex-col items-center">
             {appConfig.global.logo && (
-              <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-16 w-auto mb-4" data-ai-hint="logo" />
+              <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-20 w-auto mb-4" data-ai-hint="logo" />
             )}
-             {appConfig.global.displayAppName && (
-                <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
-             )}
         </header>
         <Card className="w-full shadow-lg border-2 border-primary/20">
           <CardHeader className="text-center items-center">

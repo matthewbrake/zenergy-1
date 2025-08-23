@@ -15,7 +15,8 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export default function SolarReportPage() {
   const [addressData] = useLocalStorage<AddressData | null>('addressData', null);
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [, setAnalysisResult] = useLocalStorage<AnalysisResult | null>('analysisResult', null);
+  const [localAnalysisResult, setLocalAnalysisResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState(appConfig.solarReport.loading.initial);
@@ -36,7 +37,8 @@ export default function SolarReportPage() {
           if (result.success && result.data) {
             console.log('[CLIENT] Analysis successful.', result.data);
             setLoadingMessage(appConfig.solarReport.loading.rendering);
-            setAnalysisResult(result.data);
+            setAnalysisResult(result.data); // Save full result to local storage
+            setLocalAnalysisResult(result.data);
           } else {
             console.error('[CLIENT] Analysis failed. Error received from server:', result.error);
             setError(result.error || 'An unknown error occurred during the analysis.');
@@ -53,13 +55,14 @@ export default function SolarReportPage() {
         setError("No address data found in your session. Please go back and enter an address.");
         setLoading(false);
     }
-  }, [addressData]);
+  }, [addressData, setAnalysisResult]);
 
 
   const handleReset = () => {
     localStorage.removeItem('addressData');
     localStorage.removeItem('prospectData');
     localStorage.removeItem('serviceChoice');
+    localStorage.removeItem('analysisResult');
     router.push('/');
   };
 
@@ -92,8 +95,8 @@ export default function SolarReportPage() {
          )
     }
 
-    if (analysisResult && addressData) {
-      return <AnalysisDisplay result={analysisResult} addressData={addressData} onReset={handleReset} />;
+    if (localAnalysisResult && addressData) {
+      return <AnalysisDisplay result={localAnalysisResult} addressData={addressData} onReset={handleReset} />;
     }
     
     // Fallback for when there's no address data to begin with
@@ -115,12 +118,8 @@ export default function SolarReportPage() {
        <div className="w-full max-w-6xl mx-auto">
         <header className="text-center mb-8 flex flex-col items-center">
             {appConfig.global.logo && (
-              <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-16 w-auto mb-4" data-ai-hint="logo" />
+              <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-20 w-auto mb-4" data-ai-hint="logo" />
             )}
-            {appConfig.global.displayAppName && (
-                <h1 className="text-4xl md:text-5xl font-bold text-primary tracking-tight">{appConfig.global.appName}</h1>
-            )}
-            <p className="mt-2 text-lg text-muted-foreground">{appConfig.global.appDescription}</p>
         </header>
         <Card className="w-full shadow-lg border-2 border-primary/20">
           <CardContent className="p-4 sm:p-8">
