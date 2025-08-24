@@ -85,7 +85,6 @@ export default function ServiceSelectionPage() {
             {appConfig.global.logo && (
               <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-20 w-auto mb-4" data-ai-hint="logo" />
             )}
-            <p className="mt-2 text-lg text-muted-foreground">{appConfig.global.appDescription}</p>
         </header>
         <Card className="w-full shadow-lg border-2 border-primary/20">
             <CardHeader className="text-center">

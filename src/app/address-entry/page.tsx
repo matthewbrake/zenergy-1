@@ -135,7 +135,7 @@ function AddressAutocomplete({ onSubmit, error, initialAddress }: AddressAutocom
   };
 
   const skipStep = () => {
-    router.push(appConfig.financialDetails.nextPath);
+    router.push(appConfig.solarReport.nextPath);
   }
 
   if (!API_KEY) {
