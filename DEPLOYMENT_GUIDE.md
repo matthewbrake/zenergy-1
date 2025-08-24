@@ -1,9 +1,13 @@
 
 # Solaris Navigator - Deployment Guide
 
-This guide provides step-by-step instructions for deploying the Solaris Navigator application using Firebase App Hosting. This method is recommended for its simplicity and tight integration with the Google Cloud ecosystem.
+This guide provides step-by-step instructions for deploying the Solaris Navigator application.
 
-## Prerequisites
+## Section 1: Recommended Deployment (Automated with Firebase)
+
+This method is recommended for its simplicity and tight integration with the Google Cloud ecosystem. It sets up a Continuous Integration/Continuous Deployment (CI/CD) pipeline, so every time you push a change to your GitHub repository, the app is automatically rebuilt and redeployed.
+
+### Prerequisites
 
 1.  **Node.js:** Ensure you have Node.js (version 18 or later) installed on your local machine.
 2.  **Firebase Account:** You need a Firebase project. If you don't have one, you can create one for free at the [Firebase Console](https://console.firebase.google.com/).
@@ -13,9 +17,9 @@ This guide provides step-by-step instructions for deploying the Solaris Navigato
     ```
 4.  **GitHub Account:** You will need a GitHub account to host your application's source code.
 
-## Deployment Steps
+### Deployment Steps
 
-### Step 1: Initialize Firebase in Your Project
+#### Step 1: Initialize Firebase in Your Project
 
 If your project isn't already configured for Firebase, open your terminal in the project's root directory and run:
 
@@ -32,39 +36,22 @@ firebase init hosting
 When prompted:
 
 1.  **Select a Firebase project:** Choose the Firebase project you created earlier.
-2.  **What do you want to use as your public directory?** Enter `out`. (This is Next.js's default static export directory).
+2.  **What do you want to use as your public directory?** Enter `.next`. (This is Next.js's default build directory).
 3.  **Configure as a single-page app (rewrite all urls to /index.html)?** Enter `No`. Next.js handles its own routing.
 4.  **Set up automatic builds and deploys with GitHub?** Enter `Yes`. This is the key to easy, continuous deployment.
 
-### Step 2: Connect to GitHub
+#### Step 2: Connect to GitHub
 
 1.  **Authorize Firebase:** The CLI will open a browser window asking you to authorize Firebase to access your GitHub account.
 2.  **Choose Repository:** Select the GitHub repository where your application code is stored (e.g., `your-username/solaris-navigator`).
 3.  **Set up workflow:**
-    *   **What script should be run before every deploy?** Leave this blank unless you have specific pre-deploy tasks.
+    *   **What script should be run before every deploy?** Enter `npm ci && npm run build`.
     *   **Do you want to add a script to automatically install npm dependencies?** Enter `Yes`.
-    *   **What is the name of the directory where your app's public assets are?** Enter `out`.
+    *   **What is the name of the directory where your app's public assets are?** Enter `.next`.
 
 This process will create a GitHub Actions workflow file in your repository (`.github/workflows/firebase-hosting-pull-request.yml` and/or `firebase-hosting-main.yml`). This workflow will automatically build and deploy your app whenever you push changes to your main branch.
 
-### Step 3: Configure `package.json` for Export
-
-This application is a static Next.js app, which is perfect for fast, scalable hosting. We need to tell Next.js how to build the app into static HTML/CSS/JS files.
-
-Ensure your `package.json` file contains the following `build` script:
-
-```json
-"scripts": {
-  "dev": "next dev",
-  "build": "next build",
-  "start": "next start",
-  "lint": "next lint"
-},
-```
-
-The `next build` command will automatically create the static site in the `./out` directory, which is what Firebase App Hosting will deploy.
-
-### Step 4: Add Environment Variables to GitHub
+#### Step 3: Add Environment Variables to GitHub
 
 Your application requires the `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`. This is a secret and should not be stored directly in your code.
 
@@ -77,7 +64,7 @@ Your application requires the `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`. This is a secre
 
 The GitHub Actions workflow will securely provide this key to your application during the build process.
 
-### Step 5: Deploy!
+#### Step 4: Deploy!
 
 To trigger your first deployment, simply push your code to the `main` branch of your GitHub repository:
 
@@ -93,3 +80,54 @@ You can watch the deployment progress in the **Actions** tab of your GitHub repo
 
 From now on, every time you push a change to your `main` branch, the GitHub Action will automatically trigger, rebuilding and redeploying your application. It's a completely hands-off process!
 
+---
+
+## Section 2: Manual Deployment Walkthrough
+
+This section explains how to build the application locally and deploy the output to a hosting provider that supports Node.js applications (like Vercel, Netlify, or a traditional server).
+
+**Important Note:** This application is a Next.js app, not a static HTML/CSS site. It requires a Node.js server environment to function correctly because it has server-side logic (e.g., for calling the Google Solar API). It **cannot** be hosted on static site providers like GitHub Pages.
+
+### Step 1: Install Dependencies
+
+In your terminal, navigate to the project's root directory and install all the necessary packages:
+
+```bash
+npm install
+```
+
+### Step 2: Create a Production Build
+
+Run the following command to compile and optimize the application for production:
+
+```bash
+npm run build
+```
+
+This command will create a `.next` directory in your project root. This directory contains the complete, optimized, and ready-to-run version of your application.
+
+### Step 3: Run the Production Server
+
+To start the application locally in production mode, run:
+
+```bash
+npm run start
+```
+
+This will start a production-ready web server on `http://localhost:3000`.
+
+### Step 4: Deploying the `.next` Directory
+
+The final step is to deploy the contents of your project to your chosen hosting provider. The key is that your deployment should include:
+
+1.  The entire `.next` directory.
+2.  The `node_modules` directory (or your host should run `npm install`).
+3.  The `package.json` file.
+
+Most modern Node.js hosting providers (like Vercel, the creators of Next.js) will automatically detect the Next.js project, run the `build` command for you, and deploy the application. You typically just need to connect your GitHub repository to their service.
+
+For a manual server setup, you would need to:
+1.  Copy the entire project folder to your server.
+2.  Ensure Node.js is installed on the server.
+3.  Run `npm install` and `npm run build`.
+4.  Use a process manager like `pm2` to run `npm run start` to keep the application alive.
