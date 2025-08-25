@@ -112,6 +112,7 @@ export interface DataLayersResponse {
   monthlyFluxUrl: string;
   hourlyShadeUrls: string[];
   imageryQuality: 'HIGH' | 'MEDIUM' | 'LOW';
+  boundingBox: LatLngBox;
 }
 
 export interface SizeAndSunshineStats {
