@@ -106,7 +106,7 @@ You can watch the deployment progress in the **Actions** tab of your GitHub repo
 
 ## Section 2: Manual Deployment Walkthrough
 
-This section explains how to build the application locally and deploy the output to a hosting provider that supports Node.js applications (like Vercel, Netlify, or a traditional server).
+This section explains how to build the application locally and deploy the output to a hosting provider that supports Node.js applications.
 
 **Important Note:** This application is a Next.js app, not a static HTML/CSS site. It requires a Node.js server environment to function correctly because it has server-side logic (e.g., for calling the Google Solar API). It **cannot** be hosted on static site providers like GitHub Pages.
 
@@ -146,7 +146,7 @@ The final step is to deploy the contents of your project to your chosen hosting 
 2.  The `node_modules` directory (or your host should run `npm install`).
 3.  The `package.json` file.
 
-Most modern Node.js hosting providers (like Vercel, the creators of Next.js) will automatically detect the Next.js project, run the `build` command for you, and deploy the application. You typically just need to connect your GitHub repository to their service.
+Most modern Node.js hosting providers will automatically detect the Next.js project, run the `build` command for you, and deploy the application. You typically just need to connect your GitHub repository to their service. **Excellent alternatives to Firebase Hosting include Vercel (from the creators of Next.js) and Netlify, both of which offer a similar automated deployment workflow and a generous free tier.**
 
 For a manual server setup, you would need to:
 1.  Copy the entire project folder to your server.
