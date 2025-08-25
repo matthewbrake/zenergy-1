@@ -9,15 +9,39 @@ This method is recommended for its simplicity and tight integration with the Goo
 
 ### Prerequisites
 
-1.  **Node.js:** Ensure you have Node.js (version 18 or later) installed on your local machine.
+1.  **Node.js:** Ensure you have Node.js (version 18 or later) installed on your local machine or Cloud Workstation.
 2.  **Firebase Account:** You need a Firebase project. If you don't have one, you can create one for free at the [Firebase Console](https://console.firebase.google.com/).
 3.  **Firebase CLI:** Install the Firebase Command Line Interface globally by running:
     ```bash
     npm install -g firebase-tools
     ```
-4.  **GitHub Account:** You will need a GitHub account to host your application's source code.
+4.  **GitHub Account & Repository:** You will need a GitHub account and a new, empty repository to host your application's source code.
+
+---
 
 ### Deployment Steps
+
+#### Step 0: Push Your Project to YOUR GitHub Repository
+
+First, you need to get the code from your development environment into your own repository on GitHub.
+
+1.  **Create a new, empty repository on GitHub.com.** Do not add a README, .gitignore, or license file yet.
+2.  **Initialize Git in your project folder.** In your terminal, at the root of the project, run:
+    ```bash
+    git init
+    git add .
+    git commit -m "Initial commit of Solaris Navigator"
+    ```
+3.  **Connect your project to your GitHub repository.** Replace `<Your-GitHub-Username>` and `<Your-Repository-Name>` with your actual details.
+    ```bash
+    git remote add origin https://github.com/<Your-GitHub-Username>/<Your-Repository-Name>.git
+    git branch -M main
+    ```
+4.  **Push your code to GitHub:**
+    ```bash
+    git push -u origin main
+    ```
+    Your code is now in your personal GitHub repository.
 
 #### Step 1: Initialize Firebase in Your Project
 
@@ -27,7 +51,7 @@ If your project isn't already configured for Firebase, open your terminal in the
 firebase login
 ```
 
-Follow the prompts to log in with your Google account. Then, initialize Firebase:
+Follow the prompts to log in with your Google account. Then, initialize Firebase Hosting:
 
 ```bash
 firebase init hosting
@@ -36,18 +60,19 @@ firebase init hosting
 When prompted:
 
 1.  **Select a Firebase project:** Choose the Firebase project you created earlier.
-2.  **What do you want to use as your public directory?** Enter `.next`. (This is Next.js's default build directory).
-3.  **Configure as a single-page app (rewrite all urls to /index.html)?** Enter `No`. Next.js handles its own routing.
+2.  **What do you want to use as your public directory?** Enter `.next`.
+3.  **Configure as a single-page app (rewrite all urls to /index.html)?** Enter `No`.
 4.  **Set up automatic builds and deploys with GitHub?** Enter `No`. We will do this from the Firebase Console in the next step to avoid potential issues in some terminal environments.
 
 #### Step 2: Connect to GitHub in the Firebase Console
 
-1.  Push your project code to a GitHub repository if you haven't already.
-2.  Go to your project in the **[Firebase Console](https://console.firebase.google.com/)**.
-3.  In the left-hand menu, go to **Build > App Hosting**.
-4.  Click **"Get started"**.
-5.  Follow the prompts to connect your GitHub account and select the repository for your application.
-6.  Firebase will automatically detect that it's a Next.js app and set up the build process. Confirm the settings.
+This is where you connect Firebase to the repository you just created.
+
+1.  Go to your project in the **[Firebase Console](https://console.firebase.google.com/)**.
+2.  In the left-hand menu, go to **Build > App Hosting**.
+3.  Click **"Get started"**.
+4.  Follow the prompts to connect your GitHub account and select the repository you created in Step 0.
+5.  Firebase will automatically detect that it's a Next.js app and set up the build process. Confirm the settings.
 
 This process will create a GitHub Actions workflow file in your repository (`.github/workflows/firebase-hosting-main.yml`). This workflow will automatically build and deploy your app whenever you push changes to your main branch.
 
@@ -66,19 +91,16 @@ The GitHub Actions workflow will securely provide this key to your application d
 
 #### Step 4: Deploy!
 
-To trigger your first deployment, simply push your code to the `main` branch of your GitHub repository:
+To trigger your first deployment, simply make a small change, commit it, and push it to the `main` branch of your GitHub repository:
 
 ```bash
+# For example, you can edit the README.md file slightly
 git add .
 git commit -m "Configure for Firebase App Hosting deployment"
 git push origin main
 ```
 
 You can watch the deployment progress in the **Actions** tab of your GitHub repository. Once the workflow completes, your application will be live at `your-firebase-project-id.web.app` and `your-firebase-project-id.firebaseapp.com`.
-
-### Future Deployments
-
-From now on, every time you push a change to your `main` branch, the GitHub Action will automatically trigger, rebuilding and redeploying your application. It's a completely hands-off process!
 
 ---
 
