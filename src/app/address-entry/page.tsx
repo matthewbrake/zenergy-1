@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { AddressData } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { appConfig } from '@/lib/config';
-import React, { useRef, useEffect, useState } from 'react';
+import React, { Suspense, useRef, useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -196,8 +196,8 @@ function AddressAutocomplete({ onSubmit, error, initialAddress }: AddressAutocom
   );
 }
 
-// --- AddressEntryPage ---
-export default function AddressEntryPage() {
+
+function AddressEntryComponent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const initialAddress = searchParams.get('address') || '';
@@ -208,7 +208,15 @@ export default function AddressEntryPage() {
         setAddressData(data); // Save address to local storage via custom hook
         router.push(appConfig.addressEntry.nextPath);
     };
+    return (
+        <Card className="w-full shadow-lg border-2 border-primary/20">
+            <AddressAutocomplete onSubmit={handleAddressSubmit} initialAddress={initialAddress} />
+        </Card>
+    )
+}
 
+// --- AddressEntryPage ---
+export default function AddressEntryPage() {
   return (
     <main className="flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-8 bg-background">
        <div className="w-full max-w-2xl mx-auto">
@@ -217,10 +225,15 @@ export default function AddressEntryPage() {
               <img src={appConfig.global.logo} alt={`${appConfig.global.appName} Logo`} className="h-20 w-auto mb-4" data-ai-hint="logo" />
             )}
         </header>
-        <Card className="w-full shadow-lg border-2 border-primary/20">
-            <AddressAutocomplete onSubmit={handleAddressSubmit} initialAddress={initialAddress} />
-        </Card>
+        <Suspense fallback={
+            <div className="flex items-center justify-center text-center p-8 h-96">
+              <Loader className="h-12 w-12 animate-spin text-primary mb-4" />
+            </div>
+        }>
+            <AddressEntryComponent />
+        </Suspense>
       </div>
     </main>
   );
 }
+
