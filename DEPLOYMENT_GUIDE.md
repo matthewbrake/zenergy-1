@@ -38,18 +38,18 @@ When prompted:
 1.  **Select a Firebase project:** Choose the Firebase project you created earlier.
 2.  **What do you want to use as your public directory?** Enter `.next`. (This is Next.js's default build directory).
 3.  **Configure as a single-page app (rewrite all urls to /index.html)?** Enter `No`. Next.js handles its own routing.
-4.  **Set up automatic builds and deploys with GitHub?** Enter `Yes`. This is the key to easy, continuous deployment.
+4.  **Set up automatic builds and deploys with GitHub?** Enter `No`. We will do this from the Firebase Console in the next step to avoid potential issues in some terminal environments.
 
-#### Step 2: Connect to GitHub
+#### Step 2: Connect to GitHub in the Firebase Console
 
-1.  **Authorize Firebase:** The CLI will open a browser window asking you to authorize Firebase to access your GitHub account.
-2.  **Choose Repository:** Select the GitHub repository where your application code is stored (e.g., `your-username/solaris-navigator`).
-3.  **Set up workflow:**
-    *   **What script should be run before every deploy?** Enter `npm ci && npm run build`.
-    *   **Do you want to add a script to automatically install npm dependencies?** Enter `Yes`.
-    *   **What is the name of the directory where your app's public assets are?** Enter `.next`.
+1.  Push your project code to a GitHub repository if you haven't already.
+2.  Go to your project in the **[Firebase Console](https://console.firebase.google.com/)**.
+3.  In the left-hand menu, go to **Build > App Hosting**.
+4.  Click **"Get started"**.
+5.  Follow the prompts to connect your GitHub account and select the repository for your application.
+6.  Firebase will automatically detect that it's a Next.js app and set up the build process. Confirm the settings.
 
-This process will create a GitHub Actions workflow file in your repository (`.github/workflows/firebase-hosting-pull-request.yml` and/or `firebase-hosting-main.yml`). This workflow will automatically build and deploy your app whenever you push changes to your main branch.
+This process will create a GitHub Actions workflow file in your repository (`.github/workflows/firebase-hosting-main.yml`). This workflow will automatically build and deploy your app whenever you push changes to your main branch.
 
 #### Step 3: Add Environment Variables to GitHub
 
