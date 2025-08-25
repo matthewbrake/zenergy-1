@@ -36,6 +36,12 @@
     DARK MODE THEME (Currently Active)
     This is where you can easily customize the application's color scheme.
     Colors are defined using HSL (Hue, Saturation, Lightness) values.
+    To change a color, simply modify its HSL values.
+    
+    For example, to change the primary button color to a shade of green:
+    --primary: 142 76% 36%;
+    
+    You can use an online HSL color picker to find the values you want.
     ==========================================================================
   */
   .dark,
