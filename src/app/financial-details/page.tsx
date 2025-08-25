@@ -134,7 +134,7 @@ export default function FinancialDetailsPage() {
                     </div>
                 </div>
 
-                {isSolarPath && (
+                {isSolarPath && appConfig.featureFlags.billUploadEnabled && (
                   <Alert className="bg-muted/30">
                       <UploadCloud className="h-4 w-4" />
                       <AlertTitle>{appConfig.financialDetails.billUploadTitle}</AlertTitle>

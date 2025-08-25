@@ -77,6 +77,9 @@ function AddressAutocomplete({ onSubmit, error, initialAddress }: AddressAutocom
   const [isApiLoaded, setIsApiLoaded] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
+  
+  const nextPath = appConfig.featureFlags.solarAnalysisEnabled ? '/solar-report' : '/financial-details';
+
 
   useEffect(() => {
     if(inputRef.current && initialAddress) {
@@ -135,7 +138,7 @@ function AddressAutocomplete({ onSubmit, error, initialAddress }: AddressAutocom
   };
 
   const skipStep = () => {
-    router.push(appConfig.solarReport.nextPath);
+    router.push(nextPath);
   }
 
   if (!API_KEY) {
@@ -206,7 +209,8 @@ function AddressEntryComponent() {
 
     const handleAddressSubmit = async (data: AddressData) => {
         setAddressData(data); // Save address to local storage via custom hook
-        router.push(appConfig.addressEntry.nextPath);
+        const nextPath = appConfig.featureFlags.solarAnalysisEnabled ? '/solar-report' : '/financial-details';
+        router.push(nextPath);
     };
     return (
         <Card className="w-full shadow-lg border-2 border-primary/20">
@@ -236,4 +240,3 @@ export default function AddressEntryPage() {
     </main>
   );
 }
-

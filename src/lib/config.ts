@@ -28,10 +28,11 @@
  *    - To change any text the user sees, find the corresponding key and update its value.
  *      For example, to change the main title on the first page, modify `serviceSelection.title`.
  *
- * 3. APPLICATION FLOW (`nextPath`):
- *    - Each page configuration has a `nextPath` property (e.g., `addressEntry.nextPath`).
- *    - This defines where the user is sent after completing that step. You can change these
- *      paths to alter the user journey.
+ * 3. FEATURE FLAGS (`featureFlags`):
+ *    - `solarAnalysisEnabled`: Set to `true` to use the Google Solar API and show the report.
+ *      Set to `false` to skip the report and go directly to financial details.
+ *    - `billUploadEnabled`: Set to `true` to show the "Upload Bill" feature on the financial
+ *      details page. It is disabled by default as it requires a paid Formspree plan.
  *
  * 4. STYLING (Colors, Fonts, Sizes):
  *    - For visual styling, refer to the following files:
@@ -59,7 +60,19 @@ const global = {
 };
 
 // =================================================================
-// 2. UNIFIED START & PROSPECT PAGE (`/`)
+// 2. FEATURE FLAGS
+//    Toggle major application features on or off.
+// =================================================================
+const featureFlags = {
+    // Set to true to enable the Google Solar API analysis.
+    // Set to false to skip the /solar-report page entirely.
+    solarAnalysisEnabled: false,
+    // Set to true to show the bill upload feature. Requires a paid Formspree plan to work.
+    billUploadEnabled: false,
+};
+
+// =================================================================
+// 3. UNIFIED START & PROSPECT PAGE (`/`)
 //    The first page the user interacts with.
 // =================================================================
 const serviceSelection = {
@@ -97,7 +110,7 @@ const prospectForm = {
 };
 
 // =================================================================
-// 3. ADDRESS ENTRY PAGE (`/address-entry`) (SOLAR PATH ONLY)
+// 4. ADDRESS ENTRY PAGE (`/address-entry`) (SOLAR PATH ONLY)
 // =================================================================
 const addressEntry = {
     title: 'Confirm Your Property Address',
@@ -106,12 +119,10 @@ const addressEntry = {
     placeholder: 'Enter a location',
     instructions: 'Confirming your address ensures we analyze the correct rooftop for solar potential.',
     apiKeyMissingError: 'Google Maps API key is missing. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.',
-    // This is where the user goes after confirming their address.
-    nextPath: '/solar-report',
 };
 
 // =================================================================
-// 4. SOLAR REPORT PAGE (`/solar-report`) (SOLAR PATH ONLY)
+// 5. SOLAR REPORT PAGE (`/solar-report`) (SOLAR PATH ONLY)
 // =================================================================
 const solarReport = {
     loading: {
@@ -152,7 +163,7 @@ const solarReport = {
 };
 
 // =================================================================
-// 5. OTHER SERVICES PAGE (`/other-services`) (NON-SOLAR PATHS)
+// 6. OTHER SERVICES PAGE (`/other-services`) (NON-SOLAR PATHS)
 // =================================================================
 const otherServices = {
     title: 'Tell Us More',
@@ -175,7 +186,7 @@ const otherServices = {
 };
 
 // =================================================================
-// 6. FINANCIAL DETAILS PAGE (`/financial-details`) (ALL PATHS)
+// 7. FINANCIAL DETAILS PAGE (`/financial-details`) (ALL PATHS)
 // =================================================================
 const financialDetails = {
     title: 'Final Steps',
@@ -204,7 +215,7 @@ const financialDetails = {
 };
 
 // =================================================================
-// 7. SCHEDULING PAGE (`/scheduling`) (ALL PATHS)
+// 8. SCHEDULING PAGE (`/scheduling`) (ALL PATHS)
 // =================================================================
 const scheduling = {
     title: 'Schedule Your Consultation',
@@ -220,7 +231,7 @@ const scheduling = {
 };
 
 // =================================================================
-// 8. CONFIRMATION PAGE (`/confirmation`) (ALL PATHS)
+// 9. CONFIRMATION PAGE (`/confirmation`) (ALL PATHS)
 // =================================================================
 const confirmation = {
     title: 'Appointment Confirmed!',
@@ -242,6 +253,7 @@ const confirmation = {
 // =================================================================
 export const appConfig = {
   global,
+  featureFlags,
   serviceSelection,
   prospectForm,
   addressEntry,
